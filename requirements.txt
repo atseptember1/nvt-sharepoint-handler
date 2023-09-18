@@ -1,0 +1,12 @@
+openai
+langchain
+azure-identity
+azure-search-documents==11.4.0b9
+azure-storage-blob
+fastapi[all]
+python-dotenv
+requests
+tiktoken
+pymupdf
+tiktoken
+mysql-connector-python
