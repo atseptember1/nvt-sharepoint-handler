@@ -41,12 +41,10 @@ class BlobHandler:
 
         file_name = os.path.split(file_path)[1]
         self._init_blob_client(file_name)
-        if self._blob_client.exists():
-            self._blob_client.delete_blob()
 
         try:
             with open(file=file_path, mode='rb') as data:
-                self._container_client.upload_blob(name=file_name, data=data)
+                self._container_client.upload_blob(name=file_name, data=data, overwrite=True)
                 if self._blob_client.exists():
                     return self._blob_client.url
         except Exception as err:

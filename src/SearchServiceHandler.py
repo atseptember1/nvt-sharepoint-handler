@@ -78,6 +78,7 @@ class SearchService:
             print(f"Search index {index_name} already exists")
         return status
 
+    @retry(wait=wait_random_exponential(min=1, max=20), stop=stop_after_attempt(6))
     def index_sections(self, sections: list[dict]) -> bool:
         self._create_search_index(self.index_name)
         status = False

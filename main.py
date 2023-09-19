@@ -14,15 +14,16 @@ FILE_MANAGEMENT = FileManagement(search_endpoint=os.getenv('AZURE_SEARCH_ENDPOIN
                                  openai_chat_deployment=os.getenv('AZURE_OPENAI_CHAT_DEPLOYMENT'), openai_embed_model=os.getenv('AZURE_OPENAI_EMBED_MODEL'), openai_embed_deployment=os.getenv('AZURE_OPENAI_EMBED_DEPLOYMENT'))
 
 
+class FileModel(BaseModel):
+    FileList: list[str]
+    FileName: str
+
 @app.post('/files/')
-async def upload_modify_file(file_name: str, overwrite: bool = True, upload_file: UploadFile = None):
+async def upload_modify_file(files: FileModel, upload_file: UploadFile = None):
     '''
-    This function handle actions related to handling files (upload, modify).
+    This function handle actions related to handling uoloading files.
     if upload, check if file exist, if not upload the file:
-        Else if overwrite is set to true, delete all index related to the file based on file_name
-        If overwrite is false then we must provide a new name for the file... -> randomize or sequence?
-    if modify:
-        ????
+        if file exist already, delete all index related to the file based on file_name
     '''
     FILE_MANAGEMENT.upload_file(file_name=file_name, file_io=upload_file)
     # Check if file exist, if overwrite is false then we must provide a new name for the file... -> randomize or sequence?
