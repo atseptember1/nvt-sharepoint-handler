@@ -17,16 +17,16 @@ FILE_MANAGEMENT = FileManagement(search_endpoint=os.getenv('AZURE_SEARCH_ENDPOIN
 class FileModel(BaseModel):
     FileList: list[str]
     FileName: str
+    Size: float
 
 @app.post('/files/')
-async def upload_modify_file(files: FileModel, upload_file: UploadFile = None):
+async def upload_modify_file(files: FileModel, upload_file: UploadFile):
     '''
     This function handle actions related to handling uoloading files.
     if upload, check if file exist, if not upload the file:
         if file exist already, delete all index related to the file based on file_name
     '''
-    FILE_MANAGEMENT.upload_file(file_name=file_name, file_io=upload_file)
-    # Check if file exist, if overwrite is false then we must provide a new name for the file... -> randomize or sequence?
+    FILE_MANAGEMENT.upload_file(file_name=files.FileName, file_io=upload_file)
 
 
 # @app.delete('/files/')

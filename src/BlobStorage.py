@@ -32,6 +32,11 @@ class BlobHandler:
                 raise(err)
 
     def upload_blob(self, file_path: str) -> BlobClient.url:
+        res = {
+            "status": False,
+            "BlobUrl": None
+        }
+        status = False
         if not os.path.exists(file_path):
             print(f'file path not found: {file_path}')
         if not hasattr(self, '_container_client'):
@@ -46,6 +51,8 @@ class BlobHandler:
             with open(file=file_path, mode='rb') as data:
                 self._container_client.upload_blob(name=file_name, data=data, overwrite=True)
                 if self._blob_client.exists():
-                    return self._blob_client.url
+                    res["status"] = True
+                    res["BlobUrl"] = self._blob_client.url
         except Exception as err:
             raise(err)
+        return res
