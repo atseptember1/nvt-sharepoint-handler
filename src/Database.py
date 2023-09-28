@@ -34,20 +34,26 @@ class Database:
                 print("Something is wrong with your user name or password")
             elif err.errno == errorcode.ER_BAD_DB_ERROR:
                 print("Database does not exist")
-            else:
-                print(err)
-                self.cnx.close()
+            else: 
+                print(err) 
         return self.cnx
 
-    def insert_file(self, file_list: list):
-        file_list_len = len(file_list)
-        query = f"INSERT INTO TABLE (FileName, FileUrl, Size) {self.TableList['Files']} VALUES "
-        i = 0
-        for file_metadata in file_list:
-            query = query + f"({file_metadata['FileName']}, {file_metadata['FileUrl']}, {file_metadata['Size']})"
-            if i == file_list_len: query = query + ";"
-            else: query = query + ","
-            i += 1
-
+    def insert_file(self, file_list: list[dict]):
+        query = (f"INSERT INTO TABLE (FileName, FileUrl, Size) {self.TableList['Files']} VALUES (%s, %s, %s)")
         self.db_conn()
-        
+        with self.cnx.cursor() as cursor:
+            insert_values = []
+            for file_metadata in file_list:
+                if file_metadata["Success"]:
+                    value = {
+                        "FileName": file_metadata["FileName"],
+                        "FileUrl": file_metadata["BlobUrl"],
+                        "Size": file_metadata["Size"]
+                    }
+                    insert_values.append(value)
+                try:
+                    cursor.execute(query, insert_values, multi=True)
+                    self.cnx.commit()
+                    return True
+                except Exception as err:
+                    return False
