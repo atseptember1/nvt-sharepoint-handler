@@ -26,7 +26,7 @@ async def upload_modify_file(files: FileModel, upload_file: UploadFile):
     if upload, check if file exist, if not upload the file:
         if file exist already, delete all index related to the file based on file_name
     '''
-    FILE_MANAGEMENT.upload_file(file_name=files.FileName, file_io=upload_file)
+    FILE_MANAGEMENT.batch_upload(file_name=files.FileName, file_io=upload_file)
 
 
 # @app.delete('/files/')
