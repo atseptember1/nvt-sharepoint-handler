@@ -1,46 +1,28 @@
 import os
 from datetime import datetime
 from fastapi import UploadFile
-from SearchServiceHandler import SearchService
-from OpenAIHandler import OpenAI
-from LocalFileAndFolderOps import (
-    write_to_file,
-    get_size
-)
+from pydantic import BaseModel
+from pathlib import Path
+
+from SearchServiceHandler import SearchService, SearchServiceConfig
+from OpenAIHandler import OpenAI, OpenAIConfig
+from LocalFileAndFolderOps import write_to_file, get_size
 from DocumentProcess import split_document
-from BlobStorage import BlobHandler
+from BlobStorage import BlobHandler, BlobConfig
 from main import FileModel
 from DatabaseHandler import Database
-from pydantic import BaseModel
+
+
+
 
 
 class FileManagement:
-    def __init__(self, search_endpoint: str, search_key: str, search_index_name: str,
-                 openai_endpoint: str, openai_key: str, openai_chat_deployment: str, openai_chat_model: str, openai_embed_deployment: str, openai_embed_model: str,
-                 blob_sa_name: str, blob_container_name: str,
-                 db_conn_info: dict, db_table_list: list) -> None:
-        """
-        Initializes the FileManagement class with the necessary parameters.
-
-        Args:
-            search_endpoint (str): The endpoint for the search service.
-            search_key (str): The key for the search service.
-            search_index_name (str): The name of the search index.
-            openai_endpoint (str): The endpoint for the OpenAI service.
-            openai_key (str): The key for the OpenAI service.
-            openai_chat_deployment (str): The deployment for the OpenAI chat model.
-            openai_chat_model (str): The model for the OpenAI chat model.
-            openai_embed_deployment (str): The deployment for the OpenAI embed model.
-            openai_embed_model (str): The model for the OpenAI embed model.
-            blob_sa_name (str): The name of the blob storage account.
-            blob_container_name (str): The name of the blob container.
-            db_conn_info (dict): The connection information for the database.
-            db_table_list (list): The list of tables in the database.
-        """
-        self.SearchService = SearchService(search_svc_endpoint=search_endpoint, search_svc_key=search_key, search_index_name=search_index_name)
-        self.Openai = OpenAI(endpoint=openai_endpoint, key=openai_key, chat_deployment=openai_chat_deployment, chat_model=openai_chat_model,
-                             embed_deployment=openai_embed_deployment, embed_model=openai_embed_model)
-        self.BlobHandler = BlobHandler(storage_account_name=blob_sa_name, container_name=blob_container_name)
+    def __init__(self, search_config: SearchServiceConfig, openai_config: OpenAIConfig,
+                 blob_config: BlobConfig,
+                 db_conn_info: dict, db_table_list: list) -> None
+        self.SearchService = SearchService(config=search_config)
+        self.Openai = OpenAI(config=openai_config)
+        self.BlobHandler = BlobHandler(blob)
         self.Database = Database(conn_info=db_conn_info, table_list=db_table_list)
         self.UploadState: dict = {
             "FileList": None,
@@ -60,23 +42,19 @@ class FileManagement:
         Returns:
             list[dict]: A list of sections containing the paragraph content, questions, and summary.
         """
-        counter = 1
-        section_list = []
-        for paragraph in doc:
-            questions = self.Openai.generate_question(paragrpah=paragraph)
-            summary = self.Openai.summarize_text(paragrpah=paragraph)
-            sections = {
+        section_list = [
+            {
                 "id": f"{file_name}-{counter}".replace(".", "_").replace(" ", "_").replace(":", "_").replace("/", "_").replace(",", "_").replace("&", "_"),
                 "content": paragraph,
                 "contentVector": self.Openai.embedding_word(texts=paragraph),
-                "questions": questions,
-                "questionsVector": self.Openai.embedding_word(questions),
-                "summary": summary,
-                "summaryVector": self.Openai.embedding(texts=summary),
-                "sourcefile": os.path.basename(file_name),
+                "questions": self.Openai.generate_question(paragrpah=paragraph),
+                "questionsVector": self.Openai.embedding_word(self.Openai.generate_question(paragrpah=paragraph)),
+                "summary": self.Openai.summarize_text(paragrpah=paragraph),
+                "summaryVector": self.Openai.embedding(texts=self.Openai.summarize_text(paragrpah=paragraph)),
+                "sourcefile": Path(file_name).name,
             }
-            section_list.append(sections)
-            counter += 1
+            for counter, paragraph in enumerate(doc, start=1)
+        ]
         return section_list
 
     def upload_file(self, file: FileModel, file_io: UploadFile) -> dict:

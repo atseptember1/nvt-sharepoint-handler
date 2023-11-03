@@ -19,15 +19,20 @@ from azure.search.documents.indexes.models import (
     HnswVectorSearchAlgorithmConfiguration
 )
 from tenacity import retry, wait_random_exponential, stop_after_attempt
+from pydantic import BaseModel
 
+
+class SearchServiceConfig(BaseModel):
+    endpoint: str
+    key: str
+    index_name: str
 
 class SearchService:
-    def __init__(self, search_svc_endpoint: str, search_svc_key: str, search_index_name: str) -> None:
-        self.endpoint = search_svc_endpoint
-        self.key = search_svc_key
-        self.index_name = search_index_name
-        self._init_index_client(endpoint=self.endpoint, key=self.key)
-        self._init_search_client(endpoint=search_svc_endpoint,index_name=self.index_name, key=search_svc_key)
+    def __init__(self, config: SearchServiceConfig) -> None:
+        self.config = config
+        self._init_index_client(endpoint=self.config.endpoint, key=self.config.key)
+        self._init_search_client(endpoint=self.config.endpoint, index_name=self.config.index_name,
+                                 key=self.config.key)
 
     @retry(wait=wait_random_exponential(min=1, max=20), stop=stop_after_attempt(6))
     def _init_index_client(self, endpoint: str, key: str):

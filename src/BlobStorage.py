@@ -1,12 +1,16 @@
 import os
 from azure.identity import DefaultAzureCredential
 from azure.storage.blob import ContainerClient, BlobClient
+from pydantic import BaseModel
 
+
+class BlobConfig(BaseModel):
+    sa_name: str
+    container_name: str
 
 class BlobHandler:
-    def __init__(self, storage_account_name: str, container_name: str) -> None:
-        self.storage_account_name = storage_account_name
-        self.container_name = container_name
+    def __init__(self, config: BlobConfig) -> None:
+        self.config = config
 
     def _init_credential(self) -> None:
         try:
@@ -18,8 +22,8 @@ class BlobHandler:
     def _init_container_client(self) -> None:
         self._init_credential() # get the blob client credential
         try:
-            self._container_client = ContainerClient(account_url=f'https://{self.storage_account_name}.blob.core.windows.net/',
-                                                        container_name=self.container_name,
+            self._container_client = ContainerClient(account_url=f'https://{self.config.sa_name}.blob.core.windows.net/',
+                                                        container_name=self.config.container_name,
                                                         credential=self._token)
         except Exception as err:
             raise(err)

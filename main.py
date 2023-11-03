@@ -2,16 +2,30 @@ import os
 from fastapi import FastAPI, UploadFile
 from pydantic import BaseModel
 from dotenv import load_dotenv
-from src import FileManagement
+from src import (
+    FileManagement,
+    SearchServiceConfig,
+    OpenAIConfig
+)
 
 
 app = FastAPI()
 load_dotenv()
 
-
-FILE_MANAGEMENT = FileManagement(search_endpoint=os.getenv('AZURE_SEARCH_ENDPOINT'), search_key=os.getenv('AZURE_SEARCH_KEY'), search_index_name=os.getenv('AZURE_SEARCH_INDEX'),
-                                 openai_endpoint=os.getenv('AZURE_OPENAI_ENDPOINT'), openai_key=os.getenv('AZURE_OPENAI_KEY'), openai_chat_model=os.getenv('AZURE_OPENAI_CHAT_MODEL'),
-                                 openai_chat_deployment=os.getenv('AZURE_OPENAI_CHAT_DEPLOYMENT'), openai_embed_model=os.getenv('AZURE_OPENAI_EMBED_MODEL'), openai_embed_deployment=os.getenv('AZURE_OPENAI_EMBED_DEPLOYMENT'))
+search_config = SearchServiceConfig(
+    endpoint=os.getenv('AZURE_SEARCH_ENDPOINT'),
+    key=os.getenv('AZURE_SEARCH_KEY'),
+    index_name=os.getenv('AZURE_SEARCH_INDEX')
+)
+openai_config = OpenAIConfig(
+    endpoint=os.getenv('AZURE_OPENAI_ENDPOINT')
+    key=os.getenv('AZURE_OPENAI_KEY')
+    chat_deployment=os.getenv('AZURE_OPENAI_CHAT_DEPLOYMENT')
+    chat_model=os.getenv('AZURE_OPENAI_CHAT_MODEL')
+    embed_deployment=os.getenv('AZURE_OPENAI_EMBED_DEPLOYMENT')
+    embed_model=os.getenv('AZURE_OPENAI_EMBED_MODEL')
+)
+FILE_MANAGEMENT = FileManagement(search_config=search_config, openai_config=openai_config)
 
 
 class FileModel(BaseModel):
