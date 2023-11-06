@@ -10,25 +10,27 @@ from LocalFileAndFolderOps import write_to_file, get_size
 from DocumentProcess import split_document
 from BlobStorage import BlobHandler, BlobConfig
 from main import FileModel
-from DatabaseHandler import Database
+from DatabaseHandler import Database, DatabaseConfig
 
 
-
+class FileManagementConfig(BaseModel):
+    search_config: SearchServiceConfig
+    openai_config: OpenAIConfig
+    blob_config: BlobConfig
+    database_config: DatabaseConfig
 
 
 class FileManagement:
-    def __init__(self, search_config: SearchServiceConfig, openai_config: OpenAIConfig,
-                 blob_config: BlobConfig,
-                 db_conn_info: dict, db_table_list: list) -> None
-        self.SearchService = SearchService(config=search_config)
-        self.Openai = OpenAI(config=openai_config)
-        self.BlobHandler = BlobHandler(blob)
-        self.Database = Database(conn_info=db_conn_info, table_list=db_table_list)
+    def __init__(self, config: FileManagementConfig):
+        self.SearchService = SearchService(config=config.search_config)
+        self.Openai = OpenAI(config=config.openai_config)
+        self.BlobHandler = BlobHandler(config=config.blob_config)
+        self.Database = Database(config=config.database_config)
         self.UploadState: dict = {
             "FileList": None,
             "FileState": []
         }
-        self.UploadPending: list[dict] = []
+        self.UploadSuccess: list[dict] = []
         self.UploadFailed: list[dict] = []
 
     def _create_sections(self, file_name: str, doc: list[str]) -> list[dict]:
@@ -66,13 +68,12 @@ class FileManagement:
             file_io (UploadFile): An instance of the UploadFile class representing the file content.
 
         Returns:
-            dict: A dictionary containing the metadata for the uploaded file, including the blob URL, file name, size, and success status.
+            dict: A dictionary containing the metadata for the uploaded file, including the blob URL, file name, and success status.
         """
         metadata = {
-                "BlobUrl": "",
-                "FileName": file.FileName,
-                "Size": file.Size,
-                "Success": False
+            "BlobUrl": "",
+            "FileName": file.FileName,
+            "Success": False
         }
         file_path = write_to_file(file_name=file.FileName, file_bytes=file_io)
         data = split_document(path=file_path)
@@ -85,10 +86,10 @@ class FileManagement:
             if blob_res["status"]:
                 metadata["BlobUrl"] = blob_res["BlobUrl"]
                 metadata["Success"] = True
-                self.UploadPending.append(metadata)
+                self.UploadSuccess.append(metadata)
         self.UploadState["FileState"].append(metadata)
         return metadata
-    
+
     def _check_cur_uploadlist(self, file_list: list):
         """
         Checks if the current upload list matches the provided file list.
@@ -99,27 +100,31 @@ class FileManagement:
         Returns:
             bool: True if the current upload list matches the provided file list, False otherwise.
         """
-        if not self.UploadState["FileList"]: self.UploadState["FileList"] = file_list
-        elif self.UploadState["FileList"] != file_list: return False
+        if not self.UploadState["FileList"]:
+            self.UploadState["FileList"] = file_list
+        elif self.UploadState["FileList"] != file_list:
+            return False
         return True
-    
+
     def batch_upload(self, file: FileModel, file_io: UploadFile):
         """
         Performs batch upload of files.
+
+        This method checks if the current upload list matches the provided file list. 
+        If it does, it calls the `upload_file` method to upload the file and its content. 
+        If the current file is the last file in the list, it inserts the metadata of the successfully uploaded files into the database. 
+        If the current upload list does not match the provided file list, it inserts the metadata of the successfully uploaded files into the database, updates the current upload list, and then uploads the file and its content.
 
         Args:
             file (FileModel): An instance of the FileModel class representing the file to be uploaded.
             file_io (UploadFile): An instance of the UploadFile class representing the file content.
         """
         if self._check_cur_uploadlist(file.FileList):
-            file_list_len = len(file.FileList)
             self.upload_file(file=file, file_io=file_io)
-            if file.FileList.index(file.FileName) - 1 == file_list_len:
-                self.Database.insert_file(self.UploadPending)
+            if file.FileList.index(file.FileName) == len(file.FileList) - 1:
+                self.Database.insert_file(self.UploadSuccess)
         else:
-            if len(self.UploadPending) != 0:
-                self.Database.insert_file(self.UploadPending)
-            else:
-                self.UploadState["FileList"] = file.FileList
-                self.upload_file(file=file, file_io=file_io)
-
+            if self.UploadSuccess:
+                self.Database.insert_file(self.UploadSuccess)
+            self.UploadState["FileList"] = file.FileList
+            self.upload_file(file=file, file_io=file_io)

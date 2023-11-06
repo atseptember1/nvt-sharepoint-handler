@@ -1,47 +1,53 @@
 import mysql.connector
 from mysql.connector import errorcode
+from pydantic import BaseModel
+from azure.identity import DefaultAzureCredential
+import pyodbc
+import struct
+
+
+class DatabaseConfig(BaseModel):
+    username: str = ""
+    user_password: str = ""
+    credential: DefaultAzureCredential = None
+    host: str
+    database: str
+    table_list: dict = {
+
+    }
+    token: str = ""
+
 
 class Database:
-    def __init__(self, conn_info: dict, table_list: dict) -> None:
-        self.ConnInfo = conn_info
-        self.TableList = table_list
-        self._sanity_check()
+    def __init__(self, config: DatabaseConfig) -> None:
+        self.config = config
+        self.conn = None
 
-    def _sanity_check(self) -> bool:
+    def _get_token(self):
+        # ref: https://learn.microsoft.com/en-us/azure/app-service/tutorial-connect-msi-azure-database?tabs=mysql%2Csystemassigned%2Cpython%2Cwindowsclient
+        if self.config.credential != None:
+            token = self.config.credential.get_token("https://database.windows.net/.default").token.encode("UTF-16-LE")
+            self.config.token = struct.pack(f'<I{len(token)}s', len(token), token)
+        else:
+            raise ValueError("database credential is not provided")
 
-        def _check_key(key_list: list, to_check_list: dict):
-            for key in key_list:
-                if key not in to_check_list:
-                    return key
-            return True
-
-        conn_key_list = ['username', 'password', 'host', 'database']
-        conn_check = _check_key(key_list=conn_key_list, to_check_list=self.ConnInfo)
-        if conn_check != True:
-            raise ValueError(f"database connection missing {conn_check}")
-        table_key_list = ["Files"]
-        table_check = _check_key(key_list=table_key_list, to_check_list=self.TableList)
-        if table_check != True:
-            raise ValueError(f"database connection missing {table_check}")
-        return True
-
-    def db_conn(self) -> mysql.connector.connection.MySQLConnection:
-        try:
-            self.cnx = mysql.connector.connect(user=self.ConnInfo['username'], password=self.ConnInfo['password'],
-                                          host=self.ConnInfo['host'], database=self.ConnInfo['database'], use_pure=False)
-        except mysql.connector.Error as err:
-            if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
-                print("Something is wrong with your user name or password")
-            elif err.errno == errorcode.ER_BAD_DB_ERROR:
-                print("Database does not exist")
-            else: 
-                print(err) 
-        return self.cnx
+    def db_conn(self) -> pyodbc.Connection:
+        self._get_token()
+        if not self.config.token:
+            raise ValueError("database token is not provided")
+        else:
+            SQL_COPT_SS_ACCESS_TOKEN = 1256
+            connString = f"Driver={{ODBC Driver 17 for SQL Server}};SERVER={self.config.host}.database.windows.net;DATABASE={self.config.database}"
+            try:
+                self.conn = pyodbc.connect(connstring=connString, attrs_before={SQL_COPT_SS_ACCESS_TOKEN: self.config.token})
+            except pyodbc.Error as err:
+                raise err
+        return self.conn
 
     def insert_file(self, file_list: list[dict]):
-        query = (f"INSERT INTO TABLE (FileName, FileUrl, Size) {self.TableList['Files']} VALUES (%s, %s, %s)")
         self.db_conn()
-        with self.cnx.cursor() as cursor:
+        query = (f"INSERT INTO TABLE (FileName, FileUrl, Size) {self.TableList['Files']} VALUES (%s, %s, %s)")
+        with self.conn.cursor() as cursor:
             insert_values = []
             for file_metadata in file_list:
                 if file_metadata["Success"]:
@@ -53,9 +59,7 @@ class Database:
                     insert_values.append(value)
                 try:
                     cursor.execute(query, insert_values, multi=True)
-                    self.cnx.commit()
+                    self.conn.commit()
                     return True
                 except Exception as err:
                     return False
-                
-        

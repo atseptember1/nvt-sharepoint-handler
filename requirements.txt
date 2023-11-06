@@ -9,4 +9,4 @@ requests
 tiktoken
 pymupdf
 tiktoken
-mysql-connector-python
+pyodbc

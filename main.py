@@ -12,26 +12,26 @@ from src import (
 app = FastAPI()
 load_dotenv()
 
-search_config = SearchServiceConfig(
+SEARCH_CONFIG = SearchServiceConfig(
     endpoint=os.getenv('AZURE_SEARCH_ENDPOINT'),
     key=os.getenv('AZURE_SEARCH_KEY'),
     index_name=os.getenv('AZURE_SEARCH_INDEX')
 )
-openai_config = OpenAIConfig(
-    endpoint=os.getenv('AZURE_OPENAI_ENDPOINT')
-    key=os.getenv('AZURE_OPENAI_KEY')
-    chat_deployment=os.getenv('AZURE_OPENAI_CHAT_DEPLOYMENT')
-    chat_model=os.getenv('AZURE_OPENAI_CHAT_MODEL')
-    embed_deployment=os.getenv('AZURE_OPENAI_EMBED_DEPLOYMENT')
+OPENAI_CONFIG = OpenAIConfig(
+    endpoint=os.getenv('AZURE_OPENAI_ENDPOINT'),
+    key=os.getenv('AZURE_OPENAI_KEY'),
+    chat_deployment=os.getenv('AZURE_OPENAI_CHAT_DEPLOYMENT'),
+    chat_model=os.getenv('AZURE_OPENAI_CHAT_MODEL'),
+    embed_deployment=os.getenv('AZURE_OPENAI_EMBED_DEPLOYMENT'),
     embed_model=os.getenv('AZURE_OPENAI_EMBED_MODEL')
 )
-FILE_MANAGEMENT = FileManagement(search_config=search_config, openai_config=openai_config)
+
+FILE_MANAGEMENT = FileManagement(search_config=SEARCH_CONFIG, openai_config=OPENAI_CONFIG)
 
 
 class FileModel(BaseModel):
     FileList: list[str]
     FileName: str
-    Size: float
 
 @app.post('/files/')
 async def upload_modify_file(files: FileModel, upload_file: UploadFile):
