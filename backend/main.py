@@ -38,21 +38,15 @@ FILE_MANAGEMENT_CONFIG = FileManagementConfig(
 FILE_MANAGEMENT = FileHandler(config=FILE_MANAGEMENT_CONFIG)
 
 
-# class FileModel(BaseModel):
-#     FileName: str
-
-# class FileModelOut(BaseModel):
-#     BlobUrl: str
-#     FileName: str
-#     Success: bool
-
-
 @app.post('/file/upload')
-async def upload_modify_file(file: FileModel, upload_file: UploadFile) -> FileModelOut:
+async def upload_file(upload_files: list[UploadFile]) -> FileModelOut:
     '''
     This function handle actions related to handling uoloading files.
     if upload, check if file exist, if not upload the file:
         if file exist already, delete all index related to the file based on file_name
     '''
-    res = FILE_MANAGEMENT.upload_file(file=file.FileName, file_io=upload_file)
-    return res
+    result = []
+    for file in upload_files:
+        upload_result = FILE_MANAGEMENT.upload_file(file_io=file)
+        result.append(upload_result)
+    return result

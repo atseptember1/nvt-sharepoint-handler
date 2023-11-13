@@ -9,11 +9,7 @@ from OpenAIHandler import OpenAI, OpenAIConfig
 from LocalFileAndFolderOps import write_to_file
 from DocumentProcess import split_document
 from BlobStorage import BlobHandler, BlobConfig
-# from main import FileModel, FileModelOut
 
-
-class FileModel(BaseModel):
-    FileName: str
 
 class FileModelOut(BaseModel):
     BlobUrl: str
@@ -51,16 +47,16 @@ class FileHandler:
         ]
         return section_list
 
-    def upload_file(self, file: FileModel, file_io: UploadFile) -> FileModelOut:
+    def upload_file(self, file_io: UploadFile) -> FileModelOut:
         metadata = FileModelOut(
             BlobUrl = "",
-            FileName = file.FileName,
+            FileName = file_io.filename,
             Success = False
         )
             
-        file_path = write_to_file(file_name=file.FileName, file_bytes=file_io)
+        file_path = write_to_file(file_name=file_io.filename, file_bytes=file_io)
         data = split_document(path=file_path)
-        sections = self._create_sections(file_name=file.FileName, doc=data)
+        sections = self._create_sections(file_name=file_io.filename, doc=data)
         if not self.SearchService.index_sections(sections=sections):
             print(SystemError("Search indexing failed"))
         else:

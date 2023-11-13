@@ -1,4 +1,4 @@
-reflex
+streamlit
 langchain
 fastapi[all]
 openai
