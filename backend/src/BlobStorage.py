@@ -9,6 +9,9 @@ class BlobConfig(BaseModel):
     container_name: str
     credential: DefaultAzureCredential
 
+    class Config:
+        arbitrary_types_allowed = True
+
 
 class BlobHandler:
     def __init__(self, config: BlobConfig) -> None:
@@ -29,7 +32,7 @@ class BlobHandler:
             except Exception as err:
                 raise (err)
 
-    def upload_blob(self, file_path: str) -> dict[str, any]:
+    def upload_blob(self, file_path: str) -> dict:
         res = {
             "status": False,
             "BlobUrl": None

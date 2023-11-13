@@ -4,7 +4,7 @@ import logging
 from time import sleep
 from azure.search.documents.indexes import SearchIndexClient
 from azure.search.documents import SearchClient
-from azure.core.credentials import AzureKeyCredential
+from azure.identity import DefaultAzureCredential
 from azure.search.documents.indexes.models import (
     SearchFieldDataType,
     SimpleField,
@@ -24,28 +24,31 @@ from pydantic import BaseModel
 
 class SearchServiceConfig(BaseModel):
     endpoint: str
-    key: str
+    credential: DefaultAzureCredential
     index_name: str
+    
+    class Config:
+        arbitrary_types_allowed = True
 
 class SearchService:
     def __init__(self, config: SearchServiceConfig) -> None:
         self.config = config
-        self._init_index_client(endpoint=self.config.endpoint, key=self.config.key)
+        self._init_index_client(endpoint=self.config.endpoint, credential=self.config.credential)
         self._init_search_client(endpoint=self.config.endpoint, index_name=self.config.index_name,
-                                 key=self.config.key)
+                                 credential=self.config.credential)
 
     @retry(wait=wait_random_exponential(min=1, max=20), stop=stop_after_attempt(6))
-    def _init_index_client(self, endpoint: str, key: str):
+    def _init_index_client(self, endpoint: str, credential: DefaultAzureCredential):
         try:
-            self.index_client = SearchIndexClient(endpoint=endpoint, credential=AzureKeyCredential(key))
+            self.index_client = SearchIndexClient(endpoint=endpoint, credential=credential)
         except Exception as err:
             raise(err)
     
-    def _init_search_client(self, endpoint: str, index_name: str, key: str):
+    def _init_search_client(self, endpoint: str, index_name: str, credential: DefaultAzureCredential):
         try:
             self.search_client = SearchClient(endpoint=endpoint,
                                         index_name=index_name,
-                                        credential=AzureKeyCredential(key=key))
+                                        credential=credential)
         except Exception as err:
             raise(err)
 

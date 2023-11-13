@@ -1,7 +1,7 @@
 import json
 from langchain.chat_models import AzureChatOpenAI
 from langchain.llms import AzureOpenAI
-from langchain.embeddings import OpenAIEmbeddings
+from langchain.embeddings import AzureOpenAIEmbeddings
 from langchain.prompts import ChatPromptTemplate
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.chains.summarize import load_summarize_chain
@@ -24,7 +24,7 @@ class OpenAIConfig(BaseModel):
 
 class OpenAI:
     def __init__(self, config: OpenAIConfig) -> None:
-        self.cofig = config
+        self.config = config
         self.chat = self._init_chat_model()
         self.embed = self._init_embed_model()
         self.prompt_profiles = {
@@ -51,7 +51,7 @@ class OpenAI:
     def _init_chat_model(self) -> AzureChatOpenAI:
         try:
             chat = AzureChatOpenAI(
-                openai_api_base=self.config.endpoint,
+                azure_endpoint=self.config.endpoint,
                 openai_api_key=self.config.key,
                 openai_api_version=self.config.api_version,
                 openai_api_type=self.config.api_type,
@@ -62,13 +62,13 @@ class OpenAI:
             raise (err)
         return chat
 
-    def _init_embed_model(self) -> OpenAIEmbeddings:
+    def _init_embed_model(self) -> AzureOpenAIEmbeddings:
         try:
-            embed = OpenAIEmbeddings(
-                openai_api_base=self.config.endpoint,
-                openai_api_key=self.config.key,
-                openai_api_version=self.api_version,
+            embed = AzureOpenAIEmbeddings(
+                azure_endpoint=self.config.endpoint,
+                api_key=self.config.key,
                 openai_api_type=self.config.api_type,
+                openai_api_version=self.config.api_version,
                 deployment=self.config.embed_deployment,
                 model=self.config.embed_model,
             )
