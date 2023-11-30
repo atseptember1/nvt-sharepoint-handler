@@ -1,4 +1,5 @@
 from azure.identity import DefaultAzureCredential
+from azure.core.credentials import TokenCredential, AccessToken
 
 
 class AzureAuthenticate:
@@ -6,6 +7,7 @@ class AzureAuthenticate:
         self.credential = DefaultAzureCredential()
         self.get_openai_token()
     
-    def get_openai_token(self):
+    def get_openai_token(self) -> AccessToken:
         scope = "https://cognitiveservices.azure.com/.default"
         self.openai_acess_token = self.credential.get_token(scope)
+        return self.openai_acess_token

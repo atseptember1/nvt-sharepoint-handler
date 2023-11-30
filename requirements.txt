@@ -12,3 +12,5 @@ tiktoken
 pymupdf
 azure-monitor-opentelemetry
 requests
+unstructured[all-docs]
+msgraph-sdk

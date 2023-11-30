@@ -23,16 +23,19 @@ with col1:
         with st.sidebar:
             file_list = st.sidebar.file_uploader(label='Upload file', accept_multiple_files=True, type=ALLOWED_FILES)
             if len(file_list) > 0:
-                st.button(label="Upload", on_click=upload_files(backend_url=BACKEND_URL,
-                                                                file_list=file_list))
+                upload_submit = st.button(label="Upload")
+                if upload_submit:
+                    res = upload_files(backend_url=BACKEND_URL, file_list=file_list)
+                
+                # st.button(label="Upload")
 with col2: 
     delete_btn = st.button('Delete')
 
 df = pd.DataFrame(
     [
-        {"FileName": "cac.py", "FileUrl": "/Users/nam/coding-stuff/nvt-azure-chatbot-frontend/.venv/lib/python3.11/site-packages/streamlit/runtime/scriptrunner/script_runner.py"},
-        {"FileName": "loz.cac", "FileUrl": "/Users/nam/coding-stuff/nvt-azure-chatbot-frontend/.venv/lib/python3.11/site-packages/streamlit/runtime/scriptrunner/script_runner.py"},
-        {"FileName": "eheheh.loa", "FileUrl": "/Users/nam/coding-stuff/nvt-azure-chatbot-frontend/.venv/lib/python3.11/site-packages/streamlit/runtime/scriptrunner/script_runner.py"}
+        {"FileName": "test.pdf", "FileUrl": "/Users/nam/coding-stuff/nvt-azure-chatbot-frontend/.venv/lib/python3.11/site-packages/streamlit/runtime/scriptrunner/script_runner.py"},
+        {"FileName": "test2.xls", "FileUrl": "/Users/nam/coding-stuff/nvt-azure-chatbot-frontend/.venv/lib/python3.11/site-packages/streamlit/runtime/scriptrunner/script_runner.py"},
+        {"FileName": "eheheh.docx", "FileUrl": "/Users/nam/coding-stuff/nvt-azure-chatbot-frontend/.venv/lib/python3.11/site-packages/streamlit/runtime/scriptrunner/script_runner.py"}
     ]
 )
 selection = dataframe_with_selections(df)
