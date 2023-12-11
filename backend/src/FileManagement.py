@@ -8,21 +8,8 @@ from OpenAIHandler import OpenAI
 from LocalFileAndFolderOps import write_to_file
 from DocumentProcess import split_document
 from BlobStorage import BlobHandler
-
-
-class FileModelOut(BaseModel):
-    BlobUrl: str
-    FileName: str
-    Success: bool
-
-
-class FileManagementConfig(BaseModel):
-    search_config: any
-    openai_config: any
-    blob_config: any
-
-    class Config:
-        arbitrary_types_allowed = True
+from model.input import FileManagementConfig
+from model.output import FileModelOut
 
 
 #test

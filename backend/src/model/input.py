@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from azure.identity import DefaultAzureCredential
+from common import CustomSkillContentRecordIn
 
 
 class BlobConfig(BaseModel):
@@ -20,11 +21,11 @@ class FileManagementConfig(BaseModel):
         
 class OpenAIConfig(BaseModel):
     endpoint: str
-    key: str
+    key: str = None
     chat_deployment: str
     chat_model: str
-    embed_deployment: str
-    embed_model: str
+    embed_deployment: str = None
+    embed_model: str = None
     api_type: str = "azure"
     api_version: str = "2023-03-15-preview"
     
@@ -38,3 +39,23 @@ class SearchServiceConfig(BaseModel):
         
 class OpenaiSummarizeIn(BaseModel):
     paragraph: str
+
+class CognitveSearchConfig(BaseModel):
+    endpoint: str
+    index_name: str
+    sharepoint_appid: str
+    sharepoint_appsec: str
+    sharepoint_apptenantid: str
+    sharepoint_domain: str
+    aoai_endpoint: str
+    aoai_key: str
+    aoai_embed_deployment: str
+
+# CustomSkill input based from SplitSkill of Azure AI Search
+class CustomSkillContentIn(BaseModel):
+    values: list[CustomSkillContentRecordIn]
+    
+class SharepointHelperConfig(BaseModel):
+    client_id: str
+    client_secret: str
+    tenant_id: str

@@ -3,88 +3,148 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).parent.parent))
 
-import os
-import datetime
-from pydantic import BaseModel
-from azure.core.credentials import AzureKeyCredential
-from azure.search.documents.indexes.models import (
-    SearchIndexerDataContainer,
-    SearchIndex,
-    SearchIndexer,
-    SimpleField,
-    SearchFieldDataType,
-    EntityRecognitionSkill,
-    InputFieldMappingEntry,
-    OutputFieldMappingEntry,
-    SearchIndexerSkillset,
-    SearchableField,
-    IndexingParameters,
-    SearchIndexerDataSourceConnection,
-    IndexingParametersConfiguration,
-    FieldMapping,
-    FieldMappingFunction,
-    AzureOpenAIEmbeddingSkill,
-    SplitSkill,
-    WebApiSkill
-)
-from azure.search.documents.indexes import SearchIndexerClient, SearchIndexClient
-from azure.core.exceptions import ResourceExistsError, HttpResponseError
+from time import sleep
 from AzureAuthentication import AzureAuthenticate
-
-
-class CognitveSearchConfig(BaseModel):
-    endpoint: str
-    index_name: str
-    sharepoint_appid: str
-    sharepoint_appsec: str
-    sharepoint_apptenantid: str
-    sharepoint_domain: str
+from model.input import CognitveSearchConfig
+from model.common import SharepointSite, IndexerProp, IndexerList
+from azure.core.exceptions import HttpResponseError
+from azure.search.documents.indexes import SearchIndexerClient, SearchIndexClient
+from azure.search.documents.indexes.models import (
+    SearchIndexerDataContainer, SearchIndex, SearchIndexer, SimpleField,
+    SearchFieldDataType, InputFieldMappingEntry, OutputFieldMappingEntry,
+    SearchIndexerSkillset, SearchIndexer, SearchableField, SearchField,
+    IndexingParameters, SearchIndexerDataSourceConnection,
+    IndexingParametersConfiguration, FieldMapping, FieldMappingFunction,
+    AzureOpenAIEmbeddingSkill, SplitSkill, WebApiSkill, TextSplitMode,
+    VectorSearch, HnswVectorSearchAlgorithmConfiguration, HnswParameters,
+    AzureOpenAIVectorizer, AzureOpenAIParameters,
+    ExhaustiveKnnVectorSearchAlgorithmConfiguration, ExhaustiveKnnParameters,
+    VectorSearchAlgorithmKind, VectorSearchProfile, VectorSearchVectorizerKind,
+    SemanticConfiguration, SemanticField, SemanticSettings, PrioritizedFields,
+    SearchIndexerIndexProjections, SearchIndexerIndexProjectionSelector,
+    SearchIndexerIndexProjectionsParameters, IndexProjectionMode)
+from azure.search.documents import SearchClient
 
 
 class CognitiveSearch(AzureAuthenticate):
+
     def __init__(self, config: CognitveSearchConfig) -> None:
         super().__init__()
         self.config = config
 
     def create_index(self) -> SearchIndex:
         fields = [
-            SimpleField(name="id", type=SearchFieldDataType.String, key=True),
-            SearchableField(
-                name="metadata_spo_item_name", type=SearchFieldDataType.String
+            SearchField(name="parent_id",
+                        type=SearchFieldDataType.String,
+                        sortable=True,
+                        filterable=True,
+                        facetable=True),
+            SearchableField(name="metadata_spo_item_name",
+                            type=SearchFieldDataType.String),
+            SimpleField(name="metadata_spo_item_path",
+                        type=SearchFieldDataType.String),
+            SearchableField(name="metadata_spo_site_id",
+                            type=SearchFieldDataType.String,
+                            filterable=True),
+            SimpleField(name="metadata_spo_item_weburi",
+                        type=SearchFieldDataType.String),
+            SearchField(
+                name="chunk_id",
+                type=SearchFieldDataType.String,
+                key=True,
+                sortable=True,
+                filterable=True,
+                facetable=True,
+                analyzer_name="keyword",
             ),
-            SimpleField(name="metadata_spo_item_path", type=SearchFieldDataType.String),
-            SearchableField(
-                name="metadata_spo_site_id", type=SearchFieldDataType.String
-            ),
-            SimpleField(
-                name="metadata_spo_item_weburi", type=SearchFieldDataType.String
-            ),
-            SearchableField(name="content", type=SearchFieldDataType.String),
+            SearchableField(name="chunk", type=SearchFieldDataType.String),
+            SearchableField(name="vector",
+                            type=SearchFieldDataType.Collection(
+                                SearchFieldDataType.Single),
+                            vector_search_dimensions=1536,
+                            vector_search_profile="myHnswProfile"),
+            SearchableField(name="summary", type=SearchFieldDataType.String)
         ]
-        try:
-            index = SearchIndex(name=self.config.index_name, fields=fields)
-            index_client = SearchIndexClient(
-                endpoint=self.config.endpoint, credential=self.credential
+        vector_search = VectorSearch(
+            algorithms=[
+                HnswVectorSearchAlgorithmConfiguration(
+                    name="myHnsw",
+                    kind=VectorSearchAlgorithmKind.HNSW,
+                    parameters=HnswParameters(
+                        m=4,
+                        ef_construction=400,
+                        ef_search=500,
+                        metric="cosine",
+                    ),
+                ),
+                ExhaustiveKnnVectorSearchAlgorithmConfiguration(
+                    name="myExhaustiveKnn",
+                    kind=VectorSearchAlgorithmKind.EXHAUSTIVE_KNN,
+                    parameters=ExhaustiveKnnParameters(metric="cosine"),
+                ),
+            ],
+            profiles=[
+                VectorSearchProfile(
+                    name="myHnswProfile",
+                    algorithm="myHnsw",
+                    vectorizer="myOpenAI",
+                ),
+                VectorSearchProfile(
+                    name="myExhaustiveKnnProfile",
+                    algorithm="myExhaustiveKnn",
+                    vectorizer="myOpenAI",
+                ),
+            ],
+            vectorizers=[
+                AzureOpenAIVectorizer(
+                    name="myOpenAI",
+                    kind=VectorSearchVectorizerKind.AZURE_OPEN_AI,
+                    azure_open_ai_parameters=AzureOpenAIParameters(
+                        resource_uri=self.config.aoai_endpoint,
+                        deployment_id=self.config.aoai_embed_deployment,
+                        api_key=self.config.aoai_key,
+                    ),
+                ),
+            ],
+        )
+
+        semantic_config = [
+            SemanticConfiguration(
+                name="my-semantic-config",
+                prioritized_fields=PrioritizedFields(
+                    prioritized_content_fields=[
+                        SemanticField(field_name="chunk")
+                    ]),
             )
+        ]
+
+        # Create the semantic settings with the configuration
+        semantic_settings = SemanticSettings(configurations=semantic_config)
+
+        try:
+            index = SearchIndex(
+                name=self.config.index_name,
+                fields=fields,
+                vector_search=vector_search,
+                semantic_settings=semantic_settings,
+            )
+            index_client = SearchIndexClient(endpoint=self.config.endpoint,
+                                             credential=self.credential)
             result = index_client.create_or_update_index(index=index)
             return result
-        except ResourceExistsError as res_exist_err:
-            print(res_exist_err)
-            return index_client.get_index(name=self.config.index_name)
         except Exception as generic_err:
             print(generic_err)
             raise (generic_err)
 
     def create_datasource(
-        self, sharepointsite_name: str, domain_name: str
-    ) -> SearchIndexerDataSourceConnection:
+            self, sharepointsite_name: str,
+            domain_name: str) -> SearchIndexerDataSourceConnection:
         container_name = "allSiteLibraries"
         datasource_name = f"{sharepointsite_name}-datasource"
         connection_string = f"SharePointOnlineEndpoint=https://{domain_name}.sharepoint.com/sites/{sharepointsite_name}/;ApplicationId={self.config.sharepoint_appid};ApplicationSecret={self.config.sharepoint_appsec};TenantId={self.config.sharepoint_apptenantid}"
         try:
-            ds_client = SearchIndexerClient(
-                endpoint=self.config.endpoint, credential=self.credential
-            )
+            ds_client = SearchIndexerClient(endpoint=self.config.endpoint,
+                                            credential=self.credential)
             container = SearchIndexerDataContainer(name=container_name)
             data_source_connection = SearchIndexerDataSourceConnection(
                 name=datasource_name,
@@ -93,35 +153,130 @@ class CognitiveSearch(AzureAuthenticate):
                 container=container,
             )
             data_source = ds_client.create_data_source_connection(
-                data_source_connection
-            )
+                data_source_connection)
             return data_source
         except HttpResponseError as genericErr:
             print(genericErr)
             if genericErr.status_code == 400:
                 if genericErr.message.__contains__(
-                    "data source with that name already exists"
-                ):
-                    return ds_client.get_data_source_connection(name=datasource_name)
+                        "data source with that name already exists"):
+                    return ds_client.get_data_source_connection(
+                        name=datasource_name)
             raise (genericErr)
-        
-    def create_skillset(self):
-        # TODO: implment this
-        client = SearchIndexerClient(endpoint=self.config.endpoint, credential=self.azure_search_token)
-        inp = InputFieldMappingEntry(name="text", source="/document/lastRenovationDate")
-        output = OutputFieldMappingEntry(name="dateTimes", target_name="RenovatedDate")
-        s = EntityRecognitionSkill(name="merge-skill", inputs=[inp], outputs=[output])
-        skillset = SearchIndexerSkillset(name="hotel-data-skill", skills=[s], description="example skillset")
-        result = client.create_skillset(skillset)
-        return result
 
-    def create_indexer(
-        self, sharepointsite_name: str, datasource_name: str, target_index_name: str
-    ) -> SearchIndexer:
+    def create_skillset(self, index_name: str):
+        # Split text into chunk skill
+        split_skill = SplitSkill(
+            description="Split skill to chunk documents",
+            text_split_mode=TextSplitMode.PAGES,
+            context="/document",
+            maximum_page_length=5000,
+            # page_overlap_length=40,
+            inputs=[
+                InputFieldMappingEntry(name="text",
+                                       source="/document/content"),
+            ],
+            outputs=[
+                OutputFieldMappingEntry(name="textItems", target_name="pages")
+            ],
+        )
+
+        # # Generate summarize from chunk with WebApiSkill using local api
+        # generate_summarize_skill = WebApiSkill(  # TODO: implement this
+        #     description=
+        #     "skill to call web api for generate summarize using OpenAI",
+        #     uri=
+        #     "<uri>",
+        #     http_method="POST",
+        #     batch_size=10,
+        #     context="/document/pages/*",
+        #     inputs=[
+        #         InputFieldMappingEntry(name="text",
+        #                                source="/document/pages/*"),
+        #     ],
+        #     outputs=[
+        #         OutputFieldMappingEntry(name="result",
+        #                                 target_name="webApiResult"),
+        #     ])
+
+        # # Azure OpenAI embedding skill for generating vector
+        embedding_skill = AzureOpenAIEmbeddingSkill(
+            description="Skill to generate embeddings via Azure OpenAI",
+            context="/document/pages/*",
+            resource_uri=self.config.aoai_endpoint,
+            deployment_id=self.config.aoai_embed_deployment,
+            api_key=self.config.aoai_key,
+            inputs=[
+                InputFieldMappingEntry(name="text",
+                                       source="/document/pages/*"),
+            ],
+            outputs=[
+                OutputFieldMappingEntry(name="embedding", target_name="vector")
+            ],
+        )
+
+        # Project all the skill results to index fields
+        index_projections = SearchIndexerIndexProjections(
+            selectors=[
+                SearchIndexerIndexProjectionSelector(
+                    target_index_name=index_name,
+                    parent_key_field_name="parent_id",
+                    source_context="/document/pages/*",
+                    mappings=[
+                        InputFieldMappingEntry(name="chunk",
+                                               source="/document/pages/*"),
+                        InputFieldMappingEntry(
+                            name="vector", source="/document/pages/*/vector"),
+                        InputFieldMappingEntry(
+                            name="metadata_spo_item_name",
+                            source="/document/metadata_spo_item_name"),
+                        InputFieldMappingEntry(
+                            name="metadata_spo_item_path",
+                            source="/document/metadata_spo_item_path"),
+                        InputFieldMappingEntry(
+                            name="metadata_spo_site_id",
+                            source="/document/metadata_spo_site_id"),
+                        InputFieldMappingEntry(
+                            name="metadata_spo_item_weburi",
+                            source="/document/metadata_spo_item_weburi"),
+                        InputFieldMappingEntry(name="summary",
+                                               source="/document/webApiResult")
+                        # InputFieldMappingEntry(name="title", source="/document/metadata_storage_name"),
+                    ],
+                ),
+            ],
+            parameters=SearchIndexerIndexProjectionsParameters(
+                projection_mode=IndexProjectionMode.
+                SKIP_INDEXING_PARENT_DOCUMENTS),
+        )
+
+        skillset_name = f"{self.config.index_name}-skillset"
+        skillset = SearchIndexerSkillset(
+            name=skillset_name,
+            description="Skillset to chunk documents and generating embeddings",
+            # skills=[split_skill, embedding_skill, generate_summarize_skill],
+            skills=[split_skill, embedding_skill],
+            index_projections=index_projections)
+
+        client = SearchIndexerClient(endpoint=self.config.endpoint,
+                                     credential=self.credential)
+        try:
+            result = client.create_or_update_skillset(skillset=skillset)
+            return result
+        except HttpResponseError as generic_err:
+            print(generic_err)
+            if generic_err.status_code == 400:
+                if generic_err.message.__contains__(
+                        "skillset with that name already exists"):
+                    return client.get_skillset(name=skillset_name)
+            raise generic_err
+
+    def create_indexer(self, sharepointsite_name: str, datasource_name: str,
+                       target_index_name: str,
+                       skillset_name: str) -> SearchIndexer:
         indexer_name = f"{sharepointsite_name}-indexer"
         configuration = IndexingParametersConfiguration(
-            indexed_file_name_extensions=".pdf, .docx", query_timeout=None
-        )
+            indexed_file_name_extensions=".pdf, .docx", query_timeout=None)
         parameters = IndexingParameters(configuration=configuration)
         field_maps = [
             FieldMapping(
@@ -130,64 +285,81 @@ class CognitiveSearch(AzureAuthenticate):
                 mapping_function=FieldMappingFunction(name="base64Encode"),
             )
         ]
+
         indexer = SearchIndexer(
             name=indexer_name,
             data_source_name=datasource_name,
             target_index_name=target_index_name,
-            # skillset_name=skillset_name,  # TODO: implment this mother fucker
+            skillset_name=skillset_name,  # TODO: implment this mother fucker
             parameters=parameters,
-            field_mappings=field_maps,
+            # field_mappings=field_maps,
         )
         try:
-            indexer_client = SearchIndexerClient(
-                endpoint=self.config.endpoint, credential=self.credential
-            )
-            indexer_client.create_indexer(indexer)  # create the indexer
+            indexer_client = SearchIndexerClient(endpoint=self.config.endpoint,
+                                                 credential=self.credential)
+            result = indexer_client.create_or_update_indexer(indexer)
+            return result
         except HttpResponseError as genericErr:
             print(genericErr)
             if genericErr.status_code == 400:
                 if genericErr.message.__contains__(
-                    "indexer with that name already exists"
-                ):
+                        "indexer with that name already exists"):
                     return indexer_client.get_indexer(name=indexer_name)
             raise (genericErr)
 
-    def create_indexer_flow(self, sharepointsite_name: str):
-        self.create_index()
+    def create_indexer_flow(self, sharepointsite_name: str) -> SearchIndexer:
+        # create index
+        index = self.create_index()
+        # create data source
         datasource = self.create_datasource(
             sharepointsite_name=sharepointsite_name,
             domain_name=self.config.sharepoint_domain,
         )
-        indexer = self.create_indexer(
-            sharepointsite_name=sharepointsite_name,
-            datasource_name=datasource.name,
-            target_index_name=self.config.index_name,
-        )
+        # create skillset
+        skillset = self.create_skillset(index_name=index.name)
+        # create indexer
+        indexer = self.create_indexer(sharepointsite_name=sharepointsite_name,
+                                      datasource_name=datasource.name,
+                                      target_index_name=self.config.index_name,
+                                      skillset_name=skillset.name)
         return indexer
-
-
-if __name__ == "__main__":
-    import sys
-    from dotenv import load_dotenv
-    from pathlib import Path
-
-    sys.path.append(str(Path(__file__).parent.parent))
-    load_dotenv()
-    SHAREPOINT_APP_ID = os.getenv("SHAREPOINT_APP_ID")
-    SHAREPOINT_APP_SEC = os.getenv("SHAREPOINT_APP_SEC")
-    SHAREPOINT_TENANT_ID = os.getenv("SHAREPOINT_TENANT_ID")
-    SHAREPOINT_DOMAIN = os.getenv("SHAREPOINT_DOMAIN")
-    AZURE_SEARCH_ENDPOINT = os.getenv("AZURE_SEARCH_ENDPOINT")
-    AZURE_SEARCH_INDEX = os.getenv("AZURE_SEARCH_INDEX")
-
-    cog_search_config = CognitveSearchConfig(
-        endpoint=AZURE_SEARCH_ENDPOINT,
-        index_name=AZURE_SEARCH_INDEX,
-        sharepoint_appid=SHAREPOINT_APP_ID,
-        sharepoint_appsec=SHAREPOINT_APP_SEC,
-        sharepoint_apptenantid=SHAREPOINT_TENANT_ID,
-        sharepoint_domain=SHAREPOINT_DOMAIN,
-    )
-
-    cog_search = CognitiveSearch(config=cog_search_config)
-    result = cog_search.create_indexer_flow(sharepointsite_name="test-site")
+    
+    def delete_indexer_and_stuff(self, sharepointsite: SharepointSite):
+        indexer_client = SearchIndexerClient(endpoint=self.config.endpoint,
+                                                 credential=self.credential)
+        search_client = SearchClient(endpoint=self.config.endpoint,
+                                             credential=self.credential,
+                                             index_name=self.config.index_name)
+        indexer_name = f"{sharepointsite.name.lower()}-indexer"
+        datasource_name = f"{sharepointsite.name.lower()}-datasource"
+        try:
+            indexer_client.delete_data_source_connection(data_source_connection=datasource_name)
+            indexer_client.delete_indexer(indexer=indexer_name)
+            filter = f"metadata_spo_site_id eq '{sharepointsite.id}'"
+            while True:
+                r = search_client.search("", filter=filter,top=1000 , include_total_count=True)
+                if r.get_count() == 0:
+                    break
+                r = search_client.delete_documents(documents=[{"chunk_id": d["chunk_id"]} for d in r])
+                sleep(5)
+        except HttpResponseError as genericErr:
+            raise genericErr
+        
+    def list_indexer(self):
+        indexer_client = SearchIndexerClient(endpoint=self.config.endpoint,
+                                             credential=self.credential)
+        try:
+            indexers = indexer_client.get_indexers()
+            indexers_prop_list = []
+            for indexer in indexers:
+               indexer_prop = IndexerProp(
+                   name=indexer.name,
+                   DataSourceName=indexer.data_source_name,
+                   SkillSetName=indexer.skillset_name,
+                   IndexName=indexer.target_index_name
+               ) 
+               indexers_prop_list.append(indexer_prop)
+            result = IndexerList(value=indexers_prop_list)
+            return result
+        except HttpResponseError as genericErr:
+            raise genericErr

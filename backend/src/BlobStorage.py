@@ -2,15 +2,7 @@ import os
 from azure.identity import DefaultAzureCredential
 from azure.storage.blob import ContainerClient, BlobClient
 from pydantic import BaseModel
-
-
-class BlobConfig(BaseModel):
-    sa_name: str
-    container_name: str
-    credential: DefaultAzureCredential
-
-    class Config:
-        arbitrary_types_allowed = True
+from model.input import BlobConfig
 
 
 class BlobHandler:

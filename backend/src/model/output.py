@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from common import CustomSkillContentRecordOut
 
 
 class FileModelOut(BaseModel):
@@ -8,3 +9,7 @@ class FileModelOut(BaseModel):
     
 class OpenAISummarizeOut(BaseModel):
     content: str
+    
+class CustomSkillContentOut(BaseModel):
+    values: list[CustomSkillContentRecordOut]
+    

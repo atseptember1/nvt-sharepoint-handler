@@ -1,14 +1,13 @@
 import os
 from dotenv import load_dotenv
 import streamlit as st
-import json
 import pandas as pd
 import numpy as np
 from src.FileLogic import (
     click_uploadbtn,
-    dataframe_with_selections,
     upload_files
 )
+from src.common import dataframe_with_selections
 
 
 load_dotenv()
@@ -33,9 +32,9 @@ with col2:
 
 df = pd.DataFrame(
     [
-        {"FileName": "test.pdf", "FileUrl": "/Users/nam/coding-stuff/nvt-azure-chatbot-frontend/.venv/lib/python3.11/site-packages/streamlit/runtime/scriptrunner/script_runner.py"},
-        {"FileName": "test2.xls", "FileUrl": "/Users/nam/coding-stuff/nvt-azure-chatbot-frontend/.venv/lib/python3.11/site-packages/streamlit/runtime/scriptrunner/script_runner.py"},
-        {"FileName": "eheheh.docx", "FileUrl": "/Users/nam/coding-stuff/nvt-azure-chatbot-frontend/.venv/lib/python3.11/site-packages/streamlit/runtime/scriptrunner/script_runner.py"}
+        {"FileName": "test.pdf", "FileUrl": "/Users/aaa/coding-stuff/nvt-azure-chatbot-frontend/.venv/lib/python3.11/site-packages/streamlit/runtime/scriptrunner/script_runner.py"},
+        {"FileName": "test2.xls", "FileUrl": "/Users/aaaa/coding-stuff/nvt-azure-chatbot-frontend/.venv/lib/python3.11/site-packages/streamlit/runtime/scriptrunner/script_runner.py"},
+        {"FileName": "eheheh.docx", "FileUrl": "/Users/aaaa/coding-stuff/nvt-azure-chatbot-frontend/.venv/lib/python3.11/site-packages/streamlit/runtime/scriptrunner/script_runner.py"}
     ]
 )
 selection = dataframe_with_selections(df)
