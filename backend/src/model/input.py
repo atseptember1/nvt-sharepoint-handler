@@ -59,3 +59,6 @@ class SharepointHelperConfig(BaseModel):
     client_id: str
     client_secret: str
     tenant_id: str
+    
+class ListUserSiteIn(BaseModel):
+    userId: str

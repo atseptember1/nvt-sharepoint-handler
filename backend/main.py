@@ -6,7 +6,13 @@ from src.SearchServiceHandler import SearchServiceConfig
 from src.OpenAIHandler import OpenAIConfig, OpenAI
 from src.BlobStorage import BlobConfig
 from src.AzureAuthentication import AzureAuthenticate
-from src.model.input import OpenaiSummarizeIn, CustomSkillContentIn, SharepointHelperConfig, CognitveSearchConfig
+from src.model.input import (
+    OpenaiSummarizeIn,
+    CustomSkillContentIn,
+    SharepointHelperConfig,
+    CognitveSearchConfig,
+    ListUserSiteIn
+)
 from src.model.output import OpenAISummarizeOut
 from src.model.common import SharepointSiteList
 from src.CustomSkill import OpenAICustomSkill
@@ -139,3 +145,14 @@ def create_sharepoint_indexer(input: SharepointSiteList):
 def list_indexer():
     cognitive_search = CognitiveSearch(config=SHAREPOINT_COGSEARCH_CONFIG)
     return cognitive_search.list_indexer()
+
+@app.get('/api/sharepoint/list-user-site')
+def list_user_site(input: ListUserSiteIn) -> SharepointSiteList:
+    cognitive_search = CognitiveSearch(config=SHAREPOINT_COGSEARCH_CONFIG)
+    sharepoint_helper = SharepointHelper(config=SHAREPOINT_HELPER_CONFIG)
+    indexer_list = cognitive_search.list_indexer()
+    site_name_list = []
+    for indexer in indexer_list.value:
+        site_name = indexer.DataSourceName.removesuffix("-datasource")
+        site_name_list.append(site_name)
+    return sharepoint_helper.check_user_belong_to_site_flow(input.userId, site_name_list)

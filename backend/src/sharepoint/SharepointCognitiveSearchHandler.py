@@ -4,6 +4,7 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
 
 from time import sleep
+from datetime import timedelta
 from AzureAuthentication import AzureAuthenticate
 from model.input import CognitveSearchConfig
 from model.common import SharepointSite, IndexerProp, IndexerList
@@ -17,7 +18,7 @@ from azure.search.documents.indexes.models import (
     IndexingParametersConfiguration, FieldMapping, FieldMappingFunction,
     AzureOpenAIEmbeddingSkill, SplitSkill, WebApiSkill, TextSplitMode,
     VectorSearch, HnswVectorSearchAlgorithmConfiguration, HnswParameters,
-    AzureOpenAIVectorizer, AzureOpenAIParameters,
+    AzureOpenAIVectorizer, AzureOpenAIParameters, IndexingSchedule,
     ExhaustiveKnnVectorSearchAlgorithmConfiguration, ExhaustiveKnnParameters,
     VectorSearchAlgorithmKind, VectorSearchProfile, VectorSearchVectorizerKind,
     SemanticConfiguration, SemanticField, SemanticSettings, PrioritizedFields,
@@ -39,17 +40,13 @@ class CognitiveSearch(AzureAuthenticate):
                         sortable=True,
                         filterable=True,
                         facetable=True),
-            SearchableField(name="metadata_spo_item_name",
-                            type=SearchFieldDataType.String),
-            SimpleField(name="metadata_spo_item_path",
-                        type=SearchFieldDataType.String),
+            SearchableField(name="title", type=SearchFieldDataType.String),
             SearchableField(name="metadata_spo_site_id",
                             type=SearchFieldDataType.String,
                             filterable=True),
-            SimpleField(name="metadata_spo_item_weburi",
-                        type=SearchFieldDataType.String),
+            SimpleField(name="location", type=SearchFieldDataType.String),
             SearchField(
-                name="chunk_id",
+                name="id",
                 type=SearchFieldDataType.String,
                 key=True,
                 sortable=True,
@@ -58,12 +55,11 @@ class CognitiveSearch(AzureAuthenticate):
                 analyzer_name="keyword",
             ),
             SearchableField(name="chunk", type=SearchFieldDataType.String),
-            SearchableField(name="vector",
-                            type=SearchFieldDataType.Collection(
-                                SearchFieldDataType.Single),
-                            vector_search_dimensions=1536,
-                            vector_search_profile="myHnswProfile"),
-            SearchableField(name="summary", type=SearchFieldDataType.String)
+            SearchField(name="chunkVector",
+                        type=SearchFieldDataType.Collection(
+                            SearchFieldDataType.Single),
+                        vector_search_dimensions=1536,
+                        vector_search_profile="myHnswProfile")
         ]
         vector_search = VectorSearch(
             algorithms=[
@@ -171,7 +167,7 @@ class CognitiveSearch(AzureAuthenticate):
             text_split_mode=TextSplitMode.PAGES,
             context="/document",
             maximum_page_length=5000,
-            # page_overlap_length=40,
+            page_overlap_length=40,
             inputs=[
                 InputFieldMappingEntry(name="text",
                                        source="/document/content"),
@@ -211,7 +207,8 @@ class CognitiveSearch(AzureAuthenticate):
                                        source="/document/pages/*"),
             ],
             outputs=[
-                OutputFieldMappingEntry(name="embedding", target_name="vector")
+                OutputFieldMappingEntry(name="embedding",
+                                        target_name="vector")
             ],
         )
 
@@ -226,22 +223,17 @@ class CognitiveSearch(AzureAuthenticate):
                         InputFieldMappingEntry(name="chunk",
                                                source="/document/pages/*"),
                         InputFieldMappingEntry(
-                            name="vector", source="/document/pages/*/vector"),
+                            name="chunkVector",
+                            source="/document/pages/*/vector"),
                         InputFieldMappingEntry(
-                            name="metadata_spo_item_name",
+                            name="title",
                             source="/document/metadata_spo_item_name"),
-                        InputFieldMappingEntry(
-                            name="metadata_spo_item_path",
-                            source="/document/metadata_spo_item_path"),
                         InputFieldMappingEntry(
                             name="metadata_spo_site_id",
                             source="/document/metadata_spo_site_id"),
                         InputFieldMappingEntry(
-                            name="metadata_spo_item_weburi",
-                            source="/document/metadata_spo_item_weburi"),
-                        InputFieldMappingEntry(name="summary",
-                                               source="/document/webApiResult")
-                        # InputFieldMappingEntry(name="title", source="/document/metadata_storage_name"),
+                            name="location",
+                            source="/document/metadata_spo_item_weburi")
                     ],
                 ),
             ],
@@ -254,7 +246,6 @@ class CognitiveSearch(AzureAuthenticate):
         skillset = SearchIndexerSkillset(
             name=skillset_name,
             description="Skillset to chunk documents and generating embeddings",
-            # skills=[split_skill, embedding_skill, generate_summarize_skill],
             skills=[split_skill, embedding_skill],
             index_projections=index_projections)
 
@@ -278,14 +269,6 @@ class CognitiveSearch(AzureAuthenticate):
         configuration = IndexingParametersConfiguration(
             indexed_file_name_extensions=".pdf, .docx", query_timeout=None)
         parameters = IndexingParameters(configuration=configuration)
-        field_maps = [
-            FieldMapping(
-                source_field_name="metadata_spo_site_library_item_id",
-                target_field_name="id",
-                mapping_function=FieldMappingFunction(name="base64Encode"),
-            )
-        ]
-
         indexer = SearchIndexer(
             name=indexer_name,
             data_source_name=datasource_name,
@@ -293,6 +276,7 @@ class CognitiveSearch(AzureAuthenticate):
             skillset_name=skillset_name,  # TODO: implment this mother fucker
             parameters=parameters,
             # field_mappings=field_maps,
+            schedule=IndexingSchedule(interval=timedelta(minutes=5)),
         )
         try:
             indexer_client = SearchIndexerClient(endpoint=self.config.endpoint,
@@ -323,42 +307,47 @@ class CognitiveSearch(AzureAuthenticate):
                                       target_index_name=self.config.index_name,
                                       skillset_name=skillset.name)
         return indexer
-    
+
     def delete_indexer_and_stuff(self, sharepointsite: SharepointSite):
         indexer_client = SearchIndexerClient(endpoint=self.config.endpoint,
-                                                 credential=self.credential)
+                                             credential=self.credential)
         search_client = SearchClient(endpoint=self.config.endpoint,
-                                             credential=self.credential,
-                                             index_name=self.config.index_name)
+                                     credential=self.credential,
+                                     index_name=self.config.index_name)
         indexer_name = f"{sharepointsite.name.lower()}-indexer"
         datasource_name = f"{sharepointsite.name.lower()}-datasource"
         try:
-            indexer_client.delete_data_source_connection(data_source_connection=datasource_name)
+            indexer_client.delete_data_source_connection(
+                data_source_connection=datasource_name)
             indexer_client.delete_indexer(indexer=indexer_name)
             filter = f"metadata_spo_site_id eq '{sharepointsite.id}'"
             while True:
-                r = search_client.search("", filter=filter,top=1000 , include_total_count=True)
+                r = search_client.search("",
+                                         filter=filter,
+                                         top=1000,
+                                         include_total_count=True)
                 if r.get_count() == 0:
                     break
-                r = search_client.delete_documents(documents=[{"chunk_id": d["chunk_id"]} for d in r])
+                r = search_client.delete_documents(documents=[{
+                    "id": d["id"]
+                } for d in r])
                 sleep(5)
         except HttpResponseError as genericErr:
             raise genericErr
-        
-    def list_indexer(self):
+
+    def list_indexer(self) -> IndexerList:
         indexer_client = SearchIndexerClient(endpoint=self.config.endpoint,
                                              credential=self.credential)
         try:
             indexers = indexer_client.get_indexers()
             indexers_prop_list = []
             for indexer in indexers:
-               indexer_prop = IndexerProp(
-                   name=indexer.name,
-                   DataSourceName=indexer.data_source_name,
-                   SkillSetName=indexer.skillset_name,
-                   IndexName=indexer.target_index_name
-               ) 
-               indexers_prop_list.append(indexer_prop)
+                indexer_prop = IndexerProp(
+                    name=indexer.name,
+                    DataSourceName=indexer.data_source_name,
+                    SkillSetName=indexer.skillset_name,
+                    IndexName=indexer.target_index_name)
+                indexers_prop_list.append(indexer_prop)
             result = IndexerList(value=indexers_prop_list)
             return result
         except HttpResponseError as genericErr:
