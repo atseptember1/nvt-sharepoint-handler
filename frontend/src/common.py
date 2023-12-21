@@ -1,5 +1,6 @@
 from pandas import DataFrame
 import streamlit as st
+from streamlit.components.v1 import html
 
 
 def dataframe_with_selections(df: DataFrame) -> DataFrame:
@@ -14,3 +15,7 @@ def dataframe_with_selections(df: DataFrame) -> DataFrame:
     )
     selected_rows = edited_df[edited_df.Select]
     return selected_rows.drop('Select', axis=1)
+
+def clear_cache_reload():
+    st.cache_data.clear()
+    st.rerun()

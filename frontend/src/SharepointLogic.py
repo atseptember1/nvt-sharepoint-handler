@@ -33,6 +33,7 @@ def create_sharepoint_indexer(backend_url: str, site_list: list):
     try:
         res_raw = requests.post(url=url, json=body)
         res_raw.raise_for_status()
+        return True
     except requests.HTTPError as err:
         raise err
     
@@ -42,6 +43,7 @@ def delete_sharepoint_indexer(backend_url: str, site_list: list):
     try:
         res_raw = requests.delete(url=url, json=body)
         res_raw.raise_for_status()
+        return True
     except requests.HTTPError as err:
         raise err
 
