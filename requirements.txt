@@ -1,16 +1,16 @@
-streamlit
-langchain
-fastapi[all]
-openai
+streamlit~=1.29.0
+fastapi[all]~=0.104.1
+openai~=1.3.8
 azure-identity
 # azure-search-documents==11.4.0b12
 ./whl/azure_search_documents-11.4.0b12-py3-none-any.whl
 azure-storage-blob
-python-dotenv
+python-dotenv~=1.0.0
 azure-cosmos==4.5.2b3
+requests~=2.31.0
 requests
-tiktoken
-pymupdf
-azure-monitor-opentelemetry
-requests
-unstructured[all-docs]
+pydantic~=2.5.2
+tenacity~=8.2.3
+pandas~=2.1.4
+numpy~=1.26.2
+uvicorn~=0.24.0.post1

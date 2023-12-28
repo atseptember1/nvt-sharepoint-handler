@@ -1,17 +1,20 @@
-import os
-from dotenv import load_dotenv
-import streamlit as st
 import json
+import os
+
 import pandas as pd
-import numpy as np
-from src.SharepointLogic import (create_sharepoint_indexer,
-                                 get_sharepoint_list,
-                                 delete_sharepoint_indexer, list_indexer)
-from src.common import dataframe_with_selections, clear_cache_reload
+import streamlit as st
+from dotenv import load_dotenv
+from src.frontend.SharepointLogic import (
+    create_sharepoint_indexer,
+    get_sharepoint_list,
+    delete_sharepoint_indexer, list_indexer
+)
+from src.frontend.common import dataframe_with_selections, clear_cache_reload
 
 load_dotenv()
 BACKEND_URL = os.getenv("BACKEND_URL")
 BOT_URL = os.getenv("TEAMS_BOT_URL")
+
 
 col1, col2, col3, col4 = st.columns(spec=4)
 with col1:
@@ -28,18 +31,17 @@ df = pd.DataFrame(sites)
 selection = dataframe_with_selections(df)
 st.write("Your selection:")
 st.write(selection)
-a = selection.to_json(orient="records")
-b = json.loads(a)
-
+selection_parsed = json.loads(selection.to_json(orient="records"))
 st.write("Current Indexers:")
 indexers = list_indexer(backend_url=BACKEND_URL)
 indexers_df = pd.DataFrame(indexers)
 st.dataframe(data=indexers_df)
-if create_indexer_btn:
-    if create_sharepoint_indexer(backend_url=BACKEND_URL, site_list=b):
+btn = create_indexer_btn
+if btn:
+    if create_sharepoint_indexer(backend_url=BACKEND_URL, site_list=selection_parsed):
         clear_cache_reload()
 if delete_btn:
-    if delete_sharepoint_indexer(backend_url=BACKEND_URL, site_list=b):
+    if delete_sharepoint_indexer(backend_url=BACKEND_URL, site_list=selection_parsed):
         clear_cache_reload()
 if refresh_btn:
     clear_cache_reload()

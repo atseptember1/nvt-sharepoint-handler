@@ -1,6 +1,5 @@
-from pandas import DataFrame
 import streamlit as st
-from streamlit.components.v1 import html
+from pandas import DataFrame
 
 
 def dataframe_with_selections(df: DataFrame) -> DataFrame:
