@@ -4,12 +4,12 @@ import os
 import pandas as pd
 import streamlit as st
 from dotenv import load_dotenv
-from src.frontend.SharepointLogic import (
+from src.FrontendUtils.SharepointLogic import (
     create_sharepoint_indexer,
     get_sharepoint_list,
     delete_sharepoint_indexer, list_indexer
 )
-from src.frontend.common import dataframe_with_selections, clear_cache_reload
+from src.FrontendUtils.common import dataframe_with_selections, clear_cache_reload
 
 load_dotenv()
 BACKEND_URL = os.getenv("BACKEND_URL")

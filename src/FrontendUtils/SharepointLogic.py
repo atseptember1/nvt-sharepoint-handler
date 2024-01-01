@@ -8,7 +8,7 @@ import streamlit as st
 def get_sharepoint_list(backend_url: str):
     url = f"{backend_url}/api/sharepoint/sites"
     res_raw = requests.get(url=url)
-    res = json.loads(res_raw.content)["value"]
+    res = json.loads(res_raw.content)["Value"]
     return res
 
 

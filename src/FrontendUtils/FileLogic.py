@@ -41,3 +41,13 @@ def delete_files(backend_url: str, list_files: list):
         return True
     except requests.HTTPError as err:
         raise err
+
+
+def configure_search(backend_url: str):
+    configure_search_url = f"{backend_url}/api/files/indexer"
+    try:
+        res_raw = requests.post(url=configure_search_url)
+        res_raw.raise_for_status()
+        return True
+    except requests.HTTPError as err:
+        raise err
