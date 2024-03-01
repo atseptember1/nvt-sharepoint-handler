@@ -56,10 +56,10 @@ class SharepointSearchHandler(SearchHandler):
         datasource = self.create_spo_datasource(spo_name, self.config.SharepointDomain)
         skillset = self.create_spo_skillset()
         indexer_name = datasource.name.lower().removesuffix("-datasource")
-        return self.create_indexer(indexer_name,datasource.name, skillset.name)
+        return self.create_indexer(indexer_name, datasource.name, skillset.name)
 
     def delete_indexer_and_stuff(self, sharepointsite: SharepointSite):
-        indexer_name = f"{sharepointsite.name.lower()}-indexer"
+        indexer_name = f"{sharepointsite.name.lower()}-sharepoint-indexer"
         datasource_name = f"{sharepointsite.name.lower()}-sharepoint-datasource"
         indexer_client = SearchIndexerClient(endpoint=self.config.Endpoint, credential=self.credential)
         search_client = SearchClient(endpoint=self.config.Endpoint, credential=self.credential,

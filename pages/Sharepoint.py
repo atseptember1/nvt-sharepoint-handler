@@ -13,6 +13,7 @@ from src.FrontendUtils.common import dataframe_with_selections, clear_cache_relo
 
 load_dotenv()
 BACKEND_URL = os.getenv("BACKEND_URL")
+print(f"Backenddd: {BACKEND_URL}")
 BOT_URL = os.getenv("TEAMS_BOT_URL")
 
 
@@ -45,3 +46,8 @@ if delete_btn:
         clear_cache_reload()
 if refresh_btn:
     clear_cache_reload()
+
+with st.sidebar:
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    logo_path = f"{current_dir}/./images/Nov_logo_notif.png"
+    st.image(logo_path)

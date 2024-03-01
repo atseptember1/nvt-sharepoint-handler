@@ -103,12 +103,33 @@ else:
 if STORAGE_ENABLED:
     @app.post('/api/files/')
     def upload_file(file: UploadFile):
+        """
+        Uploads a file to the Azure Blob Storage container.
+
+        Args:
+            file (UploadFile): The file to be uploaded.
+
+        Returns:
+            BlobHandlerUploadBlob: An object containing the upload status and blob URL.
+        """
         storage_helper = StorageHandler(STORAGE_CONFIG)
         file_path = write_to_file(file.filename, file)
         return storage_helper.upload_blob(file_path)
 
     @app.delete('/api/files/')
     def delete_file(file_list: BlobPropertiesApiIn):
+        """
+        Deletes multiple blobs from the Azure Blob Storage container.
+
+        Args:
+            file_list (BlobPropertiesApiIn): A BlobPropertiesApiIn object containing a list of BlobProperties objects, each representing a blob to be deleted.
+
+        Returns:
+            bool: True if all blobs are successfully deleted, False otherwise.
+
+        Raises:
+            HttpResponseError: If there is an error while deleting a blob.
+        """
         storage_helper = StorageHandler(STORAGE_CONFIG)
         for file in file_list.Value:
             storage_helper.delete_blob(file.Name)
@@ -116,11 +137,27 @@ if STORAGE_ENABLED:
 
     @app.get('/api/files/')
     def list_blob():
+        """
+            Retrieves a list of blobs from the Azure Blob Storage container.
+
+            Returns:
+                BlobPropertiesApiOut: A BlobPropertiesApiOut object containing a list of BlobProperties objects.
+                    Each BlobProperties object contains the name and URL of a blob.
+        """
         storage_helper = StorageHandler(STORAGE_CONFIG)
         return storage_helper.list_blobs()
 
     @app.post('/api/files/indexer')
     def create_storage_indexer():
+        """
+        Creates a storage indexer for Azure Blob Storage.
+
+        Returns:
+            str: The HTTP status code indicating the success of the operation.
+
+        Raises:
+            Exception: If there is an error while creating the storage indexer.
+        """
         cognitive_search = StorageSearchHandler(config=STORAGE_SEARCH_CONFIG)
         cognitive_search.create_indexer_flow()
         return "200"
@@ -129,50 +166,100 @@ if STORAGE_ENABLED:
 if SHAREPOINT_ENABLED:
     @app.get('/api/sharepoint/sites')
     def list_sharepoint_site() -> SharepointSiteList:
+        """
+        Retrieves a list of SharePoint sites.
+
+        Returns:
+            SharepointSiteList: A SharepointSiteList object containing a list of SharePoint sites.
+                Each SharePoint site object contains the display name, ID, name, and web URL of a site.
+
+        Raises:
+            requests.HTTPError: If there is an error while making the API request to retrieve the site list.
+        """
         sharepoint_helper = SharepointHelper(config=SHAREPOINT_HELPER_CONFIG)
         return sharepoint_helper.list_sites()
 
     @app.post('/api/sharepoint/indexer')
     def create_sharepoint_indexer(body: SharepointSiteList):
+        """
+        Creates a SharePoint indexer for Azure Cognitive Search.
+
+        Args:
+            body (SharepointSiteList): A SharepointSiteList object containing a list of SharePoint sites.
+                Each SharePoint site object contains the display name, ID, name, and web URL of a site.
+
+        Returns:
+            str: The HTTP status code indicating the success of the operation.
+
+        Raises:
+            Exception: If there is an error while creating the SharePoint indexer.
+        """
         cognitive_search = SharepointSearchHandler(config=SHAREPOINT_SEARCH_CONFIG)
-        for sharepoint_site in body.value:
+        for sharepoint_site in body.Value:
             site_name = sharepoint_site.name
             cognitive_search.create_indexer_flow(spo_name=site_name.lower())
         return "200"
 
     @app.delete('/api/sharepoint/indexer')
     def delete_sharepoint_indexer(body: SharepointSiteList):
+        """
+        Deletes a SharePoint indexer for Azure Cognitive Search.
+
+        Args:
+            body (SharepointSiteList): A SharepointSiteList object containing a list of SharePoint sites.
+                Each SharePoint site object contains the display name, ID, name, and web URL of a site.
+
+        Returns:
+            str: The HTTP status code indicating the success of the operation.
+
+        Raises:
+            HttpResponseError: If there is an error while deleting the SharePoint indexer.
+        """
         cognitive_search = SharepointSearchHandler(config=SHAREPOINT_SEARCH_CONFIG)
-        for sharepoint_site in body.value:
+        for sharepoint_site in body.Value:
             cognitive_search.delete_indexer_and_stuff(sharepointsite=sharepoint_site)
         return "200"
 
     @app.get('/api/sharepoint/list-indexer')
-    def list_indexer():
+    def list_sharepoint_indexer():
+        """
+        Retrieves a list of SharePoint indexers for Azure Cognitive Search.
+
+        Returns:
+            List[SearchIndexer]: A list of SearchIndexer objects representing the SharePoint indexers.
+                Each SearchIndexer object contains information about the indexer, such as its name, data source name, and skillset name.
+
+        Raises:
+            Exception: If there is an error while retrieving the SharePoint indexers.
+        """
         cognitive_search = SharepointSearchHandler(config=SHAREPOINT_SEARCH_CONFIG)
         return cognitive_search.list_indexer()
 
     @app.get('/api/sharepoint/list-user-site')
     def list_user_site(body: ListUserSiteApiIn) -> SharepointSiteList:
+        """
+        Retrieve the list of SharePoint sites that a user belongs to.
+
+        Parameters:
+        - body (ListUserSiteApiIn): The request body containing the user ID.
+
+        Returns:
+        - SharepointSiteList: The list of SharePoint sites that the user belongs to.
+        """
         cognitive_search = SharepointSearchHandler(config=SHAREPOINT_SEARCH_CONFIG)
         sharepoint_helper = SharepointHelper(config=SHAREPOINT_HELPER_CONFIG)
         indexer_list = cognitive_search.list_indexer()
         site_name_list = []
-        for indexer in indexer_list.value:
+        for indexer in indexer_list.Value:
             site_name = indexer.DataSourceName.removesuffix("-datasource")
+            site_name = site_name.removesuffix("-sharepoint")
             site_name_list.append(site_name)
         return sharepoint_helper.check_user_belong_to_site_flow(body.userId, site_name_list)
-
-
-@app.get('/api/sharepoint/list-indexer')
-def list_indexer():
-    search_handler = SearchHandler(config=SEARCH_CONFIG)
-    return search_handler.list_indexer()
 
 
 if __name__ == '__main__':
     import uvicorn
     try:
-        uvicorn.run(app=app, host="0.0.0.0", port=8000)
+        uvicorn.run(app=app, host="localhost", port=8000)
     except Exception as err:
         raise err

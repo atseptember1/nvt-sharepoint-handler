@@ -2,8 +2,8 @@ import json
 
 import requests
 
-from ..model.common import (SharepointToken, AzureADGroupList, SharepointSite,
-                            SharepointSiteList)
+from model.common import (SharepointToken, AzureADGroupList, SharepointSite,
+                          SharepointSiteList)
 from ..model.config import SharepointHelperConfig
 
 
@@ -55,7 +55,7 @@ class SharepointHelper:
                 if "proxyAddresses" in group:
                     group_list_raw_parsed.append(group)
 
-            group_list = AzureADGroupList(value=group_list_raw_parsed)
+            group_list = AzureADGroupList(Value=group_list_raw_parsed)
             return group_list
         except requests.HTTPError as err:
             print(err)
@@ -115,12 +115,13 @@ class SharepointHelper:
     def check_user_belong_to_site(cls, user_group_list: AzureADGroupList,
                                   site_list_to_check: SharepointSiteList) -> SharepointSiteList:
         user_site_belong_list = []
-        for site in site_list_to_check.value:
-            for group in user_group_list.value:
-                if site.siteId1 in group.proxyAddresses[0]:
-                    user_site_belong_list.append(site)
+        for site in site_list_to_check.Value:
+            for group in user_group_list.Value:
+                for g in group.proxyAddresses:
+                    if g.__contains__("SPO") and site.siteId1 in g:
+                        user_site_belong_list.append(site)
 
-        return SharepointSiteList(value=user_site_belong_list)
+        return SharepointSiteList(Value=user_site_belong_list)
 
     def check_user_belong_to_site_flow(self, user_id: str, list_site_name: list[str]) -> SharepointSiteList:
         user_group_membership = self.get_user_group_membership(user_id=user_id)
@@ -128,5 +129,5 @@ class SharepointHelper:
         for site_name in list_site_name:
             site_info = self.get_site_by_name(site_name=site_name)
             sites_to_check.append(site_info)
-        sites_to_check = SharepointSiteList(value=sites_to_check)
+        sites_to_check = SharepointSiteList(Value=sites_to_check)
         return self.check_user_belong_to_site(user_group_list=user_group_membership, site_list_to_check=sites_to_check)
