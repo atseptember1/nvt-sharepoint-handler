@@ -19,9 +19,9 @@ Easily integrate Azure AI Search with your Sharepoint sites with just a few clic
 
 ### To run locally
 1. Install required dependencies
-```
-pip install -r ./requirements.txt
-```
+    ```
+    pip install -r ./requirements.txt
+    ```
 2. Create a `.env` file from `.env-template` and fill in informations
 
     **Azure AI Search config**
@@ -55,15 +55,15 @@ pip install -r ./requirements.txt
     ```
 3. run these 2 commands to start the backend and frontend:
 
-**Backend**
-```
-uvicorn main:app --reload --port 8501
-```
+    **Backend**
+    ```
+    uvicorn main:app --reload --port 8501
+    ```
 
-**Frontend**
-```
-streamlit run Home.py --server.port 8000
-```
+    **Frontend**
+    ```
+    streamlit run Home.py --server.port 8000
+    ```
 
 Done!, you can access the frontend via http://localhost:8000
 
