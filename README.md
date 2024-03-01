@@ -89,7 +89,7 @@ Inside the `Sharepoint` panel there will be 4 buttons: `Create indexer`, `Delete
 That's it, you are good to go.
 
 ### Working with API
-For the API documentations, I develop this using FastAPI - so by default it already has **Swagger** and **ReDoc** [read more here](https://fastapi.tiangolo.com/tutorial/.metadata/).
+For the API documentations, I develop this using FastAPI - so by default it already has **Swagger** and **ReDoc** [read more here](https://fastapi.tiangolo.com/tutorial/metadata/).
 
 You can check by accessing via http://localhost:8501/docs or http://localhost:8501/redoc
 
