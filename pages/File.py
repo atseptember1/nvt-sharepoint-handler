@@ -21,6 +21,7 @@ load_dotenv()
 BACKEND_URL = os.getenv("BACKEND_URL")
 ALLOWED_FILES = ["pdf", "docx", "xlsx", "xls"]
 
+
 if 'uploadbtn_state' not in st.session_state:
     st.session_state.uploadbtn_state = False
 col1, col2, col3, col4 = st.columns(spec=4)
@@ -56,3 +57,8 @@ selection_parsed = json.loads(selection.to_json(orient="records"))
 if delete_btn:
     if delete_files(BACKEND_URL, selection_parsed):
         clear_cache_reload()
+
+with st.sidebar:
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    logo_path = f"{current_dir}/./images/Nov_logo_notif.png"
+    st.image(logo_path)

@@ -70,7 +70,7 @@ class AzureADGroupList(BaseModel):
     Attributes:
         value (list[AzureADGroup]): The list of Azure AD groups.
     """
-    value: list[AzureADGroup]
+    Value: list[AzureADGroup]
 
 
 class IndexerProp(BaseModel):
@@ -96,7 +96,7 @@ class IndexerList(BaseModel):
     Attributes:
         value (list[IndexerProp]): The list of indexers.
     """
-    value: list[IndexerProp]
+    Value: list[IndexerProp]
 
 
 class BlobHandlerUploadBlob(BaseModel):

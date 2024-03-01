@@ -151,7 +151,7 @@ class SearchHandler(AzureAuthenticate):
 
         semantic_config = [
             SemanticConfiguration(
-                name="my-semantic-config_read",
+                name="my-semantic-config",
                 prioritized_fields=PrioritizedFields(
                     prioritized_content_fields=[
                         SemanticField(field_name="chunk")
@@ -252,7 +252,7 @@ class SearchHandler(AzureAuthenticate):
             description="Split skill to chunk documents",
             text_split_mode=TextSplitMode.PAGES,
             context="/document",
-            maximum_page_length=5000,
+            maximum_page_length=3000,
             page_overlap_length=40,
             inputs=[
                 InputFieldMappingEntry(name="text", source="/document/content"),
@@ -388,6 +388,6 @@ class SearchHandler(AzureAuthenticate):
                     SkillSetName=indexer.skillset_name,
                     IndexName=indexer.target_index_name)
                 indexers_prop_list.append(indexer_prop)
-            return IndexerList(value=indexers_prop_list)
+            return IndexerList(Value=indexers_prop_list)
         except HttpResponseError as genericErr:
             raise genericErr

@@ -14,7 +14,7 @@ def get_sharepoint_list(backend_url: str):
 
 def create_sharepoint_indexer(backend_url: str, site_list: list):
     url = f"{backend_url}/api/sharepoint/indexer"
-    body = {"value": site_list}
+    body = {"Value": site_list}
     try:
         res_raw = requests.post(url=url, json=body)
         res_raw.raise_for_status()
@@ -25,7 +25,7 @@ def create_sharepoint_indexer(backend_url: str, site_list: list):
 
 def delete_sharepoint_indexer(backend_url: str, site_list: list):
     url = f"{backend_url}/api/sharepoint/indexer"
-    body = {"value": site_list}
+    body = {"Value": site_list}
     try:
         res_raw = requests.delete(url=url, json=body)
         res_raw.raise_for_status()
@@ -40,6 +40,6 @@ def list_indexer(backend_url: str):
     try:
         res_raw = requests.get(url=url)
         res_raw.raise_for_status()
-        return json.loads(res_raw.content)["value"]
+        return json.loads(res_raw.content)["Value"]
     except requests.HTTPError as err:
         raise err
