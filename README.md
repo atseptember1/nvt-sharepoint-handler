@@ -122,6 +122,7 @@ Utilizing **[Split skill](https://learn.microsoft.com/en-us/azure/search/cogniti
 | content | chunk |
 | vector | chunkVector |
 | metadata_spo_site_id | metadata_spo_site_id |
+
 ![azureaisearch-index-fields](./images/azureaiserch-index-fields.png)
 
 So with this, we indexed Sharepoint documents and know which document belong to which site based on `metadata_spo_site_id`. *now the next step is how to know if the user has access to which site?*
