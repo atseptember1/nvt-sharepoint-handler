@@ -213,7 +213,12 @@ class SearchHandler(AzureAuthenticate):
                 name=datasource_name,
                 type=ds_type,
                 connection_string=conn_str,
-                container=container
+                container=container,
+                data_deletion_detection_policy={
+                    "@odata.type": "#Microsoft.Azure.Search.SoftDeleteColumnDeletionDetectionPolicy",
+                    "softDeleteColumnName": "IsDeleted",
+                    "softDeleteMarkerValue": "true"
+                }
             )
         elif identity is not None:
             data_source_connection = SearchIndexerDataSourceConnection(
@@ -221,7 +226,12 @@ class SearchHandler(AzureAuthenticate):
                 type=ds_type,
                 connection_string=conn_str,
                 identity=identity,
-                container=container
+                container=container,
+                data_deletion_detection_policy={
+                    "@odata.type": "#Microsoft.Azure.Search.SoftDeleteColumnDeletionDetectionPolicy",
+                    "softDeleteColumnName": "IsDeleted",
+                    "softDeleteMarkerValue": "true"
+                }
             )
         else:
             raise ValueError("Please provide either a conn_str or identity")

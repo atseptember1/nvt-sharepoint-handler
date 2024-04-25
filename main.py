@@ -260,6 +260,6 @@ if SHAREPOINT_ENABLED:
 if __name__ == '__main__':
     import uvicorn
     try:
-        uvicorn.run(app=app, host="localhost", port=8501)
+        uvicorn.run(app=app, host="0.0.0.0", port=8501)
     except Exception as err:
         raise err
