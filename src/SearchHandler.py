@@ -214,11 +214,6 @@ class SearchHandler(AzureAuthenticate):
                 type=ds_type,
                 connection_string=conn_str,
                 container=container,
-                data_deletion_detection_policy={
-                    "@odata.type": "#Microsoft.Azure.Search.SoftDeleteColumnDeletionDetectionPolicy",
-                    "softDeleteColumnName": "IsDeleted",
-                    "softDeleteMarkerValue": "true"
-                }
             )
         elif identity is not None:
             data_source_connection = SearchIndexerDataSourceConnection(
@@ -226,16 +221,17 @@ class SearchHandler(AzureAuthenticate):
                 type=ds_type,
                 connection_string=conn_str,
                 identity=identity,
-                container=container,
-                data_deletion_detection_policy={
-                    "@odata.type": "#Microsoft.Azure.Search.SoftDeleteColumnDeletionDetectionPolicy",
-                    "softDeleteColumnName": "IsDeleted",
-                    "softDeleteMarkerValue": "true"
-                }
+                container=container
             )
         else:
             raise ValueError("Please provide either a conn_str or identity")
         ds_client = SearchIndexerClient(endpoint=self.config.Endpoint, credential=self.credential)
+        if ds_type == "azureblob":
+            data_source_connection.data_change_detection_policy = {
+               "@odata.type": "#Microsoft.Azure.Search.SoftDeleteColumnDeletionDetectionPolicy",
+                    "softDeleteColumnName": "IsDeleted",
+                    "softDeleteMarkerValue": "true"
+            }
         try:
             data_source = ds_client.create_data_source_connection(data_source_connection)
             return data_source
