@@ -227,10 +227,14 @@ class SearchHandler(AzureAuthenticate):
             raise ValueError("Please provide either a conn_str or identity")
         ds_client = SearchIndexerClient(endpoint=self.config.Endpoint, credential=self.search_credential)
         if ds_type == "azureblob":
-            data_source_connection.data_change_detection_policy = {
+            data_source_connection.data_deletion_detection_policy = {
                 "@odata.type": "#Microsoft.Azure.Search.SoftDeleteColumnDeletionDetectionPolicy",
                 "softDeleteColumnName": "IsDeleted",
                 "softDeleteMarkerValue": "true"
+            }
+            data_source_connection.data_change_detection_policy = {
+                "@odata.type": "#Microsoft.Azure.Search.HighWaterMarkChangeDetectionPolicy",
+                "highWaterMarkColumnName": "metadata_storage_last_modified"
             }
         try:
             data_source = ds_client.create_data_source_connection(data_source_connection)
