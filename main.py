@@ -26,17 +26,34 @@ app = FastAPI(debug=True)
 load_dotenv()
 
 # env configuration
-AZURE_STORAGE_ENV = {
-    "StorageName": os.environ["AZURE_SA"],
-    "StorageConnStr": os.environ["AZURE_SA_CONN_STR"],
-    "ContainerName": os.environ["AZURE_SA_CONTAINER"],
-}
-SHAREPOINT_ENV = {
-    "ClientId": os.environ["SHAREPOINT_CLIENT_ID"],
-    "ClientSecret": os.environ["SHAREPOINT_CLIENT_SECRET"],
-    "TenantId": os.environ["SHAREPOINT_TENANT_ID"],
-    "Domain": os.environ["SHAREPOINT_DOMAIN"]
-}
+try:
+    AZURE_STORAGE_ENV = {
+        "StorageName": os.environ["AZURE_SA"],
+        "StorageConnStr": os.environ["AZURE_SA_CONN_STR"],
+        "ContainerName": os.environ["AZURE_SA_CONTAINER"],
+    }
+except KeyError as kerr:
+    AZURE_STORAGE_ENV = {
+        "StorageName": "",
+        "StorageConnStr": "",
+        "ContainerName": "",
+    }
+
+try:
+    SHAREPOINT_ENV = {
+        "ClientId": os.environ["SHAREPOINT_CLIENT_ID"],
+        "ClientSecret": os.environ["SHAREPOINT_CLIENT_SECRET"],
+        "TenantId": os.environ["SHAREPOINT_TENANT_ID"],
+        "Domain": os.environ["SHAREPOINT_DOMAIN"]
+    }
+except KeyError as kerr:
+    SHAREPOINT_ENV = {
+        "ClientId": "",
+        "ClientSecret": "",
+        "TenantId": "",
+        "Domain": ""
+    }
+
 AZURE_SEARCH_ENV = {
     "Endpoint": os.environ["AZURE_SEARCH_ENDPOINT"],
     "IndexName": os.environ["AZURE_SEARCH_INDEX"]

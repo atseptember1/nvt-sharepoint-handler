@@ -161,7 +161,7 @@ class SearchHandler(AzureAuthenticate):
         ]
 
         semantic_settings = SemanticSettings(configurations=semantic_config)
-        index_client = SearchIndexClient(endpoint=self.config.Endpoint, credential=self.credential)
+        index_client = SearchIndexClient(endpoint=self.config.Endpoint, credential=self.search_credential)
         try:
             index = SearchIndex(
                 name=self.config.IndexName,
@@ -225,12 +225,12 @@ class SearchHandler(AzureAuthenticate):
             )
         else:
             raise ValueError("Please provide either a conn_str or identity")
-        ds_client = SearchIndexerClient(endpoint=self.config.Endpoint, credential=self.credential)
+        ds_client = SearchIndexerClient(endpoint=self.config.Endpoint, credential=self.search_credential)
         if ds_type == "azureblob":
             data_source_connection.data_change_detection_policy = {
-               "@odata.type": "#Microsoft.Azure.Search.SoftDeleteColumnDeletionDetectionPolicy",
-                    "softDeleteColumnName": "IsDeleted",
-                    "softDeleteMarkerValue": "true"
+                "@odata.type": "#Microsoft.Azure.Search.SoftDeleteColumnDeletionDetectionPolicy",
+                "softDeleteColumnName": "IsDeleted",
+                "softDeleteMarkerValue": "true"
             }
         try:
             data_source = ds_client.create_data_source_connection(data_source_connection)
@@ -313,7 +313,7 @@ class SearchHandler(AzureAuthenticate):
             description="Skillset to chunk documents and generating embeddings",
             skills=[split_skill, embedding_skill],
             index_projections=index_projections)
-        client = SearchIndexerClient(endpoint=self.config.Endpoint, credential=self.credential)
+        client = SearchIndexerClient(endpoint=self.config.Endpoint, credential=self.search_credential)
         try:
             result = client.create_or_update_skillset(skillset)
             return result
@@ -349,7 +349,7 @@ class SearchHandler(AzureAuthenticate):
             parameters=parameters,
             schedule=IndexingSchedule(interval=timedelta(minutes=5)),
         )
-        indexer_client = SearchIndexerClient(endpoint=self.config.Endpoint, credential=self.credential)
+        indexer_client = SearchIndexerClient(endpoint=self.config.Endpoint, credential=self.search_credential)
         try:
             result = indexer_client.create_indexer(indexer)
             return result
@@ -380,7 +380,7 @@ class SearchHandler(AzureAuthenticate):
         Raises:
             HttpResponseError: If an error occurs while retrieving the indexers.
         """
-        indexer_client = SearchIndexerClient(endpoint=self.config.Endpoint, credential=self.credential)
+        indexer_client = SearchIndexerClient(endpoint=self.config.Endpoint, credential=self.search_credential)
         try:
             indexers = indexer_client.get_indexers()
             indexers_prop_list = []

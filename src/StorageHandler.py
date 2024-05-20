@@ -47,7 +47,7 @@ class StorageHandler(AzureAuthenticate):
         try:
             self._container_client = ContainerClient(account_url=f'https://{self.config.StorageName}.blob.core.windows.net/',
                                                      container_name=self.config.ContainerName,
-                                                     credential=self.credential)
+                                                     credential=self.storage_credential)
         except Exception as err:
             raise err
 
