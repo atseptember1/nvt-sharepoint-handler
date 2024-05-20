@@ -1,0 +1,22 @@
+FROM python:3.11-slim
+
+# Install dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy the code into the container
+COPY . /app
+
+# Install backend dependencies
+RUN pip install -r requirements.txt
+
+# Expose the ports
+EXPOSE 8000
+EXPOSE 8501
+
+# Run both backend and frontend
+WORKDIR /app
+CMD ["bash", "-c", "uvicorn main:app --host 0.0.0.0 --port 8501 & streamlit run Home.py --server.port 8000"]

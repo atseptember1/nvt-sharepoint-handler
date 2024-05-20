@@ -19,12 +19,13 @@ from src.FrontendUtils.common import (
 
 load_dotenv()
 BACKEND_URL = os.getenv("BACKEND_URL")
-ALLOWED_FILES = ["pdf", "docx", "xlsx", "xls"]
+ALLOWED_FILES = ["pdf", "docx", "doc", "xlsx", "xls"]
+BOT_URL = os.getenv("TEAMS_BOT_URL")
 
 
 if 'uploadbtn_state' not in st.session_state:
     st.session_state.uploadbtn_state = False
-col1, col2, col3, col4 = st.columns(spec=4)
+col1, col2, col3, col4, col5 = st.columns(spec=5)
 with col1:
     upload_btn = st.button(label="Upload", key="upload_btn", on_click=click_uploadbtn)
     if st.session_state.uploadbtn_state:
@@ -47,6 +48,8 @@ with col4:
     search_config_btn = st.button("Configure Search")
     if search_config_btn:
         configure_search(BACKEND_URL)
+with col5:
+    bot_btn = st.link_button("Open Bot", url=BOT_URL)
 
 files = list_files(BACKEND_URL)
 df = pd.DataFrame(files)

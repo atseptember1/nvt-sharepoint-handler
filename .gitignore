@@ -167,3 +167,5 @@ backend/.temp
 # MAC DSTSOTRE
 *.DS_Store
 .DS_Store
+
+.fake
