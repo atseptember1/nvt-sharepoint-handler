@@ -1,6 +1,7 @@
 import json
 
 import requests
+import logging
 
 from model.common import (SharepointToken, AzureADGroupList, SharepointSite,
                           SharepointSiteList)
@@ -100,7 +101,12 @@ class SharepointHelper:
             req = requests.get(url=url, headers=headers)
             req.raise_for_status()
             content = json.loads(req.content)
-            site_raw = content["value"][0]
+            try:
+                site_raw = content["value"][0]
+            except IndexError as ierr:
+                logging.error(f"Site {site_name} not found")
+                return None
+
             site_ids = site_raw["id"].split(",")
             site_raw["companyId"] = site_ids[0]
             site_raw["siteId1"] = site_ids[1]
@@ -128,6 +134,7 @@ class SharepointHelper:
         sites_to_check = []
         for site_name in list_site_name:
             site_info = self.get_site_by_name(site_name=site_name)
-            sites_to_check.append(site_info)
+            if site_info is not None:
+                sites_to_check.append(site_info)
         sites_to_check = SharepointSiteList(Value=sites_to_check)
         return self.check_user_belong_to_site(user_group_list=user_group_membership, site_list_to_check=sites_to_check)
