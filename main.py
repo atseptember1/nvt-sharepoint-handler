@@ -180,6 +180,10 @@ if STORAGE_ENABLED:
         return "200"
 
 # Sharepoint APIs
+
+SHAREPOINT_ACCESS_TOKEN = None
+sharepoint_helper = SharepointHelper(config=SHAREPOINT_HELPER_CONFIG)
+
 if SHAREPOINT_ENABLED:
     @app.get('/api/sharepoint/sites')
     def list_sharepoint_site() -> SharepointSiteList:
@@ -193,7 +197,6 @@ if SHAREPOINT_ENABLED:
         Raises:
             requests.HTTPError: If there is an error while making the API request to retrieve the site list.
         """
-        sharepoint_helper = SharepointHelper(config=SHAREPOINT_HELPER_CONFIG)
         return sharepoint_helper.list_sites()
 
     @app.post('/api/sharepoint/indexer')
@@ -264,7 +267,6 @@ if SHAREPOINT_ENABLED:
         - SharepointSiteList: The list of SharePoint sites that the user belongs to.
         """
         cognitive_search = SharepointSearchHandler(config=SHAREPOINT_SEARCH_CONFIG)
-        sharepoint_helper = SharepointHelper(config=SHAREPOINT_HELPER_CONFIG)
         indexer_list = cognitive_search.list_indexer()
         site_name_list = []
         for indexer in indexer_list.Value:

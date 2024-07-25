@@ -3,6 +3,9 @@ import json
 import requests
 import logging
 
+import time
+from datetime import datetime
+
 from model.common import (SharepointToken, AzureADGroupList, SharepointSite,
                           SharepointSiteList)
 from ..model.config import SharepointHelperConfig
@@ -12,8 +15,25 @@ class SharepointHelper:
 
     def __init__(self, config: SharepointHelperConfig) -> None:
         self.config = config
+        self.token = None
+        self._token_start_timestamp = None
+        self._get_token()
 
-    def _get_token(self) -> SharepointToken:
+    def _get_token(self) -> None:
+        if self._token_start_timestamp is None:
+            self._token_start_timestamp = time.time()
+            self._request_token()
+            print("Initial:", self._token_start_timestamp)
+        else:
+            now = time.time()
+            if now - self._token_start_timestamp > 3500:
+                self._token_start_timestamp = now
+                self._request_token()
+                print("Updated:", self._token_start_timestamp)
+            else:
+                print("- SKIP -")
+        
+    def _request_token(self) -> SharepointToken:
         headers = {"Content-Type": "application/x-www-form-urlencoded"}
         body = {
             "grant_type": "client_credentials",
@@ -68,6 +88,8 @@ class SharepointHelper:
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self.token.access_token}"
         }
+        # TODO: https://graph.microsoft.com/v1.0/sites?$select=displayName,id,name,webUrl should work better
+        # https://graph.microsoft.com/v1.0/sites?search=*&$select=displayName,id,name,webUrl has longer caching
         url = f"https://graph.microsoft.com/v1.0/sites?search=*&$select=displayName,id,name,webUrl"
         print(url)
         try:
@@ -77,12 +99,13 @@ class SharepointHelper:
             site_list_raw = content["value"]
             site_list_parsed = []
             for site in site_list_raw:
-                site_ids = site["id"].split(",")
-                site["companyId"] = site_ids[0]
-                site["siteId1"] = site_ids[1]
-                site["siteId2"] = site_ids[2]
-                site_list_parsed.append(site)
-                print(site)
+                if ("displayName" in site) and ("name" in site):
+                    site_ids = site["id"].split(",")
+                    site["companyId"] = site_ids[0]
+                    site["siteId1"] = site_ids[1]
+                    site["siteId2"] = site_ids[2]
+                    site_list_parsed.append(site)
+                    print(f"[DEBUG: {datetime.now()}]", site)
 
             site_list = SharepointSiteList(Value=site_list_parsed)
             return site_list
